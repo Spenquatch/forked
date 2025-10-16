@@ -2,7 +2,7 @@
 title: Guard Automation Changelog
 type: changelog
 feature: guard-automation
-date: 2025-09-22
+date: 2025-10-16
 tags: [changelog]
 ---
 

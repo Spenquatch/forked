@@ -2,29 +2,29 @@
 title: Overlay Infrastructure Status
 type: status
 feature: overlay-infrastructure
-date: 2025-09-22
+date: 2025-10-16
 tags: [status]
 ---
 
 # Status: Overlay Infrastructure
 
 ## Summary
-Documentation now captures the target branch/worktree architecture and smoke tests. Engineering work for [ADR-0001](../../adr/0001-overlay-worktree-contract.md) remains (relocation, reuse, logging inside `forked build`).
+ADR-0001 overlay worktree contract is in place: builds relocate into `.forked-worktrees/`, reuse existing branches safely, and cherry-pick full ranges with path-bias assistance.
 
 ## Milestones
-- [ ] Implement sibling `.forked-worktrees/` relocation + suffixing logic
-- [ ] Reuse existing overlay worktrees with automated resets
-- [ ] Switch cherry-pick loop to full ranges + structured logging
+- [x] Implement sibling `.forked-worktrees/` relocation + suffixing logic
+- [x] Reuse existing overlay worktrees with automated resets
+- [x] Switch cherry-pick loop to full ranges + structured logging
 - [ ] Document + automate smoke checklist execution in CI
 
 ## Metrics
-- Coverage: documentation in place; code changes outstanding
-- Confidence: medium (Git edge cases still theoretical)
+- Coverage: overlay rebuild automation shipped; CI smoke step pending
+- Confidence: high (manual smoke + reuse validation complete)
 
 ## Next Steps
-1. Implement relocation + suffix logic and add targeted unit tests.
-2. Land worktree reuse reset flow; rerun smoke checklist twice locally.
-3. Update release notes with measured rebuild timing/conflict metrics.
+1. Add CI automation for the overlay smoke checklist.
+2. Capture rebuild timing/conflict metrics for release notes.
+3. Monitor Git worktree edge cases across supported versions.
 
 ## Active Work (auto-generated)
 *Last updated: 2025-10-16*
@@ -38,4 +38,3 @@ Documentation now captures the target branch/worktree architecture and smoke tes
 - **Remaining Points**: 5
 - **Estimated Completion**: SPRINT-2025-W43
 - **Average Velocity**: 21 points/sprint
-

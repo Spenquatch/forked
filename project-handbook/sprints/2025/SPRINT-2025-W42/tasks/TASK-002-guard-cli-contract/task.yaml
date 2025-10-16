@@ -3,7 +3,7 @@ title: Guard CLI Contract
 feature: guard-automation
 decision: ADR-0002
 owner: @ai-agent
-status: review
+status: done
 story_points: 3
 depends_on: []
 prio: P0

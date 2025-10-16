@@ -3,7 +3,7 @@ title: Overlay Rebuild Hardening
 feature: overlay-infrastructure
 decision: ADR-0001
 owner: @ai-agent
-status: review
+status: done
 story_points: 5
 depends_on: []
 prio: P0

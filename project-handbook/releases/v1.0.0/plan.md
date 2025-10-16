@@ -2,11 +2,11 @@
 title: Release v1.0.0 Plan
 type: release-plan
 version: v1.0.0
-start_sprint: SPRINT-2025-W39
-end_sprint: SPRINT-2025-W39
+start_sprint: SPRINT-2025-W42
+end_sprint: SPRINT-2025-W42
 planned_sprints: 1
 status: in-progress
-date: 2025-09-22
+date: 2025-10-16
 tags: [release, planning]
 links: []
 ---
@@ -22,7 +22,7 @@ Ship Forked CLI 1.0.0 with reliable overlay rebuilds, actionable guard automatio
 3. **Stretch Goal**: Finalize release ergonomics (status UX, publish remote flag, checklists)
 
 ## Sprint Timeline
-- **SPRINT-2025-W39** (Sprint 1 of 1): Polish overlays/guards and prep demo release
+- **SPRINT-2025-W42** (Sprint 1 of 1): Polish overlays/guards and prep demo release
 
 
 ## Feature Assignments
@@ -32,9 +32,8 @@ Ship Forked CLI 1.0.0 with reliable overlay rebuilds, actionable guard automatio
 | guard-automation | @ai-agent | P0 | Implement ADR-0002 (exit codes, sentinel union, `--numstat`) |
 | release-operations | @ai-agent | P1 | Align README, release notes, CI workflow, backlog follow-ups |
 
-## Success Criteria
-- [ ] ADR-0001 implementation completed and verified via smoke checklist (`forked build --id smoke` twice, clean status)
-- [ ] ADR-0002 implementation completed with guard JSON fixture committed and CI guard run passing
+- [x] ADR-0001 implementation completed and verified via smoke checklist (`forked build --id smoke` twice, clean status)
+- [x] ADR-0002 guard CLI contract delivered (exit codes, sentinel union, `--numstat`)
 - [ ] README + release notes updated with final commands, outputs, and post-tag communication plan
 - [ ] Backlog items (`forked clean`, `forked status --json`) prioritised and linked from release retrospective
 

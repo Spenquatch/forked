@@ -144,8 +144,9 @@ policy_overrides:
    forked guard --overlay overlay/v0 --output .forked/report.json
    ```
 
-   * Computes **merge base** and flags both-touched files, sentinel breaches, size gates
-   * Exits non-zero if `guards.mode` = `block` and violations exist
+* Computes **merge base** and flags both-touched files, sentinel breaches, size gates
+* Writes `.forked/report.json` (includes `"report_version": 1`, sentinel findings, and `--numstat` metrics)
+* Exits non-zero if `guards.mode` = `block` and violations exist
 
 6. **Publish it (optional)**
 
