@@ -51,7 +51,7 @@ rm -rf ../.forked-worktrees/$repo_name/test || true
 git commit -m "feat: harden overlay rebuild
 
 Implements TASK-001 for overlay-infrastructure feature.
-Part of sprint: SPRINT-2025-W39
+Part of sprint: SPRINT-2025-W42
 
 Refs: #TASK-001"
 

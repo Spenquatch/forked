@@ -1,0 +1,21 @@
+[project]
+name = "forked-cli"
+version = "0.1.0"
+description = "Git-native fork overlay & guard tool"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.12",
+    "pyyaml>=6.0",
+    "rich>=13.7",
+    "pathspec>=0.12",
+]
+
+[project.scripts]
+forked = "forked.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"

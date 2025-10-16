@@ -1,8 +1,8 @@
 ---
 title: Sprint Burndown Chart
 type: burndown
-date: 2025-09-22
-sprint: SPRINT-2025-W39
+date: 2025-10-13
+sprint: SPRINT-2025-W42
 tags: [sprint, burndown, metrics]
 links: []
 ---
@@ -11,7 +11,7 @@ links: []
 
 ```
 
-Sprint Burndown: SPRINT-2025-W39
+Sprint Burndown: SPRINT-2025-W42
 ==================================================
 
 Points Remaining:

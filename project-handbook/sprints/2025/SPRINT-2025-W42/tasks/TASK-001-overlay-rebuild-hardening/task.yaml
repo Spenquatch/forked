@@ -3,11 +3,11 @@ title: Overlay Rebuild Hardening
 feature: overlay-infrastructure
 decision: ADR-0001
 owner: @ai-agent
-status: in-progress
+status: review
 story_points: 5
 depends_on: []
 prio: P0
-due: 2025-09-26
+due: 2025-10-17
 acceptance:
   - Rebuilding the same overlay ID reuses/reset worktrees without error
   - Cherry-picking ranges apply every commit in stack order

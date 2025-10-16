@@ -7,7 +7,7 @@ status: in-progress
 story_points: 3
 depends_on: []
 prio: P0
-due: 2025-09-26
+due: 2025-10-17
 acceptance:
   - Guard CLI exits with documented codes via `typer.Exit`
   - Sentinel checks treat overlay-only files as valid divergence

@@ -51,7 +51,7 @@ forked guard --overlay overlay/test --mode warn || true
 git commit -m "feat: finalize guard cli contract
 
 Implements TASK-002 for guard-automation feature.
-Part of sprint: SPRINT-2025-W39
+Part of sprint: SPRINT-2025-W42
 
 Refs: #TASK-002"
 

@@ -1,15 +1,15 @@
 ---
-title: Sprint Plan - SPRINT-2025-W39
+title: Sprint Plan - SPRINT-2025-W42
 type: sprint-plan
-date: 2025-09-22
-sprint: SPRINT-2025-W39
-start: 2025-09-22
-end: 2025-09-26
+date: 2025-10-13
+sprint: SPRINT-2025-W42
+start: 2025-10-13
+end: 2025-10-17
 tags: [sprint, planning]
 release: v0.1.0
 ---
 
-# Sprint Plan: SPRINT-2025-W39
+# Sprint Plan: SPRINT-2025-W42
 
 ## Release Context
 **Release**: v0.1.0 (Forked CLI MVP)
@@ -19,8 +19,8 @@ release: v0.1.0
 - release-operations (supporting)
 
 ## Sprint Duration
-- Start: Monday, September 22, 2025
-- End: Friday, September 26, 2025
+- Start: Monday, October 13, 2025
+- End: Friday, October 17, 2025
 
 ## Sprint Goals
 1. [ ] Overlay rebuild is deterministic and reuses safe worktrees (overlay-infrastructure)
