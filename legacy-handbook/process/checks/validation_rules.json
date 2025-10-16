@@ -1,0 +1,184 @@
+{
+  "validation": {
+    "require_front_matter": true,
+    "skip_docs_directory": true,
+    "max_validation_issues": 100,
+    "validation_timeout_ms": 5000
+  },
+
+  "sprint_tasks": {
+    "require_task_yaml": true,
+    "require_story_points": true,
+    "require_task_directory_files": true,
+    "required_task_files": ["README.md", "steps.md", "commands.md", "checklist.md", "validation.md"],
+    "optional_task_files": ["references.md", "source/"],
+    "require_single_decision_per_task": true,
+    "enforce_sprint_scoped_dependencies": true,
+    "required_task_fields": ["id", "title", "feature", "decision", "owner", "status", "story_points", "prio", "due", "acceptance"]
+  },
+
+  "story_points": {
+    "validate_fibonacci_sequence": true,
+    "allowed_story_points": [1, 2, 3, 5, 8, 13, 21],
+    "default_story_points": 5,
+    "max_story_points": 34,
+    "warn_large_tasks": true,
+    "large_task_threshold": 13
+  },
+
+  "task_status": {
+    "allowed_statuses": ["todo", "doing", "review", "done", "blocked"],
+    "require_blocked_reason": true,
+    "validate_status_transitions": true
+  },
+
+  "daily_status": {
+    "require_weekdays_only": true,
+    "weekend_days": [5, 6],
+    "skip_weekends": true,
+    "max_hours_without_update": 24,
+    "require_daily_on_task_changes": true,
+    "monday_weekend_summary": true,
+    "friday_week_wrapup": true
+  },
+
+  "sprint_management": {
+    "sprint_duration_days": 5,
+    "sprint_start_day": 0,
+    "sprint_buffer_percentage": 20,
+    "capacity_allocation": {
+      "default_planned_percentage": 80,
+      "default_reactive_percentage": 20,
+      "enforce_allocation": true,
+      "warn_on_exceed": true
+    },
+    "health_check_thresholds": {
+      "blocked_percentage_red": 30,
+      "progress_percentage_red": 50,
+      "progress_check_day": 3,
+      "reactive_exceed_yellow": 25,
+      "reactive_exceed_red": 35
+    },
+    "require_sprint_retrospective": true,
+    "track_velocity_metrics": true,
+    "track_capacity_usage": true,
+    "p0_interrupt_policy": "always_allow",
+    "p1_assignment_policy": "use_reactive_capacity"
+  },
+
+  "features": {
+    "auto_update_feature_status": true,
+    "feature_status_update_frequency": "on_status_generation",
+    "require_feature_stage": true,
+    "allowed_feature_stages": ["proposed", "approved", "developing", "complete", "live", "deprecated"],
+    "epic_max_sprints": 4,
+    "validate_feature_dependencies": true
+  },
+
+  "releases": {
+    "min_sprints_per_release": 2,
+    "max_sprints_per_release": 4,
+    "require_release_features": true,
+    "track_critical_path": true,
+    "validate_release_timeline": true,
+    "auto_update_release_progress": true
+  },
+
+  "roadmap": {
+    "normalize_links": true,
+    "validate_roadmap_links": true,
+    "require_now_next_later_sections": true
+  },
+
+  "adr_fdr": {
+    "check_adr_id_matches_filename": true,
+    "check_adr_superseded_by": true,
+    "require_decision_before_tasks": true,
+    "allowed_decision_statuses": ["draft", "accepted", "rejected", "superseded"]
+  },
+
+  "automation": {
+    "enable_git_hooks": false,
+    "enable_notifications": false,
+    "notification_webhook": "",
+    "blocker_escalation_hours": 24
+  },
+
+  "parking_lot": {
+    "validate_structure": true,
+    "require_index_json": true,
+    "allowed_categories": ["features", "technical-debt", "research", "external-requests"],
+    "require_front_matter": true,
+    "quarterly_review_reminder": true,
+    "max_age_before_review_months": 3,
+    "auto_generate_ids": true,
+    "id_prefix_map": {
+      "features": "FEAT",
+      "technical-debt": "DEBT",
+      "research": "RES",
+      "external-requests": "EXT"
+    },
+    "default_owner": "unassigned",
+    "allow_promotion_targets": ["now", "next", "later"],
+    "default_promotion_target": "later",
+    "review_schedule": {
+      "Q1": "January",
+      "Q2": "April",
+      "Q3": "July",
+      "Q4": "October"
+    }
+  },
+
+  "backlog": {
+    "validate_structure": true,
+    "require_index_json": true,
+    "allowed_categories": ["bugs", "wildcards"],
+    "allowed_severities": ["P0", "P1", "P2", "P3", "P4"],
+    "require_p0_triage": true,
+    "p0_always_interrupts": true,
+    "auto_generate_triage_for_p0": true,
+    "capacity_allocation": {
+      "planned_work_percentage": 80,
+      "interrupt_budget_percentage": 20,
+      "allow_dynamic_adjustment": true,
+      "adjustment_presets": {
+        "normal": {"planned": 80, "reactive": 20},
+        "high_incident": {"planned": 60, "reactive": 40},
+        "feature_focus": {"planned": 90, "reactive": 10},
+        "support_rotation": {"planned": 50, "reactive": 50}
+      }
+    },
+    "id_prefix_map": {
+      "bugs": "BUG",
+      "wildcards": "WILD"
+    },
+    "default_owner": "unassigned",
+    "default_status": "open",
+    "allowed_statuses": ["open", "assigned", "in_progress", "resolved", "closed"],
+    "escalation_thresholds": {
+      "P0_max_hours": 4,
+      "P1_max_days": 3,
+      "P2_max_sprints": 2,
+      "P3_max_months": 3
+    },
+    "severity_rubric": {
+      "P0": "Critical - Production outage >50% users, security exploit, data loss",
+      "P1": "High - Degradation 10-50% users, major feature broken",
+      "P2": "Medium - <10% users affected, minor issues",
+      "P3": "Low - Cosmetic, developer experience",
+      "P4": "Wishlist - Future enhancements"
+    },
+    "triage_template": {
+      "generate_for_severities": ["P0"],
+      "include_ai_recommendations": true,
+      "include_cost_analysis": true,
+      "include_cascading_effects": true
+    },
+    "notification_settings": {
+      "alert_on_p0": true,
+      "alert_on_p1": false,
+      "p0_alert_format": "console",
+      "escalation_reminder_hours": 1
+    }
+  }
+}

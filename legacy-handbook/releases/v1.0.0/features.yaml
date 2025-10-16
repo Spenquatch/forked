@@ -1,0 +1,23 @@
+version: v1.0.0
+start_sprint: SPRINT-2025-W39
+end_sprint: SPRINT-2025-W39
+planned_sprints: 1
+features:
+  overlay-infrastructure:
+    type: regular
+    priority: P0
+    status: in-progress
+    completion: 0
+    critical_path: true
+  guard-automation:
+    type: regular
+    priority: P0
+    status: in-progress
+    completion: 0
+    critical_path: true
+  release-operations:
+    type: regular
+    priority: P1
+    status: planned
+    completion: 0
+    critical_path: false

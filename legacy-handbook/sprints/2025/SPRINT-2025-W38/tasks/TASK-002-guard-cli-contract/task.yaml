@@ -1,0 +1,18 @@
+id: TASK-002
+title: Guard CLI Contract
+feature: guard-automation
+decision: ADR-0002
+owner: @ai-agent
+status: in-progress
+story_points: 3
+depends_on: []
+prio: P0
+due: 2025-09-26
+acceptance:
+  - Guard CLI exits with documented codes via `typer.Exit`
+  - Sentinel checks treat overlay-only files as valid divergence
+  - Guard JSON includes `"report_version": 1` and size metrics via `--numstat`
+  - README + feature docs updated
+links:
+  - ../../../../../README.md#quick-smoke-checklist
+  - ../../../../features/guard-automation/status.md

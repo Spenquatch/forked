@@ -1,0 +1,138 @@
+{
+  "generated_at": "2025-09-22T18:00:00Z",
+  "phases": [
+    {
+      "name": "SPRINT-2025-W39",
+      "phase": "SPRINT-2025-W39",
+      "title": "Sprint SPRINT-2025-W39",
+      "features": [
+        "overlay-infrastructure",
+        "guard-automation",
+        "release-operations"
+      ],
+      "decisions": [
+        "ADR-0001",
+        "ADR-0002"
+      ],
+      "tasks": [
+        "TASK-001",
+        "TASK-002"
+      ]
+    }
+  ],
+  "totals": {
+    "backlog": 0,
+    "planned": 0,
+    "in_progress": 2,
+    "review": 0,
+    "blocked": 0,
+    "done": 0
+  },
+  "features": {
+    "overlay-infrastructure": {
+      "open": [
+        {
+          "id": "TASK-001",
+          "title": "Overlay Rebuild Hardening",
+          "sprint": "SPRINT-2025-W39",
+          "status": "in-progress",
+          "story_points": 5,
+          "prio": "P0",
+          "decision": "ADR-0001"
+        }
+      ],
+      "done": []
+    },
+    "guard-automation": {
+      "open": [
+        {
+          "id": "TASK-002",
+          "title": "Guard CLI Contract",
+          "sprint": "SPRINT-2025-W39",
+          "status": "in-progress",
+          "story_points": 3,
+          "prio": "P0",
+          "decision": "ADR-0002"
+        }
+      ],
+      "done": []
+    },
+    "release-operations": {
+      "open": [],
+      "done": []
+    }
+  },
+  "features_summary": [
+    {
+      "key": "overlay-infrastructure",
+      "stage": "in_progress",
+      "now": [
+        "Reuse-safe worktrees with reset before rebuild",
+        "Cherry-pick full patch ranges"
+      ],
+      "next": [
+        "Automate smoke checklist metrics"
+      ],
+      "risks": [
+        "Git <2.31 incompatibilities",
+        "Windows path handling edge cases"
+      ]
+    },
+    {
+      "key": "guard-automation",
+      "stage": "in_progress",
+      "now": [
+        "Finalize exit codes and sentinel behaviour"
+      ],
+      "next": [
+        "Capture golden JSON fixture"
+      ],
+      "risks": [
+        "Large overlays could slow guard runtime"
+      ]
+    },
+    {
+      "key": "release-operations",
+      "stage": "planned",
+      "now": [
+        "Finish planning docs + release notes"
+      ],
+      "next": [
+        "Run quick release checklist"
+      ],
+      "risks": [
+        "Docs might drift without follow-up review"
+      ]
+    }
+  ],
+  "project": {
+    "now": [
+      "overlay-infrastructure: Reuse-safe worktrees with reset before rebuild",
+      "guard-automation: Finalize exit codes and sentinel behaviour",
+      "release-operations: Finish planning docs + release notes"
+    ],
+    "next": [
+      "overlay-infrastructure: Automate smoke checklist metrics",
+      "guard-automation: Capture golden JSON fixture",
+      "release-operations: Run quick release checklist"
+    ],
+    "risks": [
+      {
+        "feature": "overlay-infrastructure",
+        "risk": "Git <2.31 incompatibilities"
+      },
+      {
+        "feature": "overlay-infrastructure",
+        "risk": "Windows path handling edge cases"
+      },
+      {
+        "feature": "guard-automation",
+        "risk": "Large overlays could slow guard runtime"
+      },
+      {
+        "feature": "release-operations",
+        "risk": "Docs might drift without follow-up review"
+      }
+    ]
+  }
+}

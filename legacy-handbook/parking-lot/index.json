@@ -1,0 +1,37 @@
+{
+  "last_updated": "2025-09-23T12:53:16.346377",
+  "total_items": 2,
+  "by_category": {
+    "features": [
+      "FEAT-20250922-social-login-integration",
+      "FEAT-20250923-new-feature-idea"
+    ],
+    "technical-debt": [],
+    "research": [],
+    "external-requests": []
+  },
+  "items": [
+    {
+      "title": "New feature idea",
+      "type": "features",
+      "status": "parking-lot",
+      "created": "2025-09-23",
+      "owner": "unassigned",
+      "tags": [],
+      "description": "Testing parking lot system",
+      "id": "FEAT-20250923-new-feature-idea",
+      "path": "parking-lot/features/FEAT-20250923-new-feature-idea"
+    },
+    {
+      "title": "Social Login Integration",
+      "type": "features",
+      "status": "parking-lot",
+      "created": "2025-09-22",
+      "owner": "unassigned",
+      "tags": [],
+      "description": "Add OAuth2 support for Google, GitHub, and Microsoft login",
+      "id": "FEAT-20250922-social-login-integration",
+      "path": "parking-lot/features/FEAT-20250922-social-login-integration"
+    }
+  ]
+}

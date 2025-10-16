@@ -1,0 +1,35 @@
+# Requirements for Project Automation Scripts
+# Install with: pip install -r requirements.txt
+
+# Note: All scripts use standard library modules only
+# No external dependencies are required
+
+# The following scripts are included:
+# - backlog_manager.py
+# - daily_status_check.py
+# - feature_manager.py
+# - feature_status_updater.py
+# - generate_project_status.py
+# - parking_lot_manager.py
+# - release_manager.py
+# - roadmap_manager.py
+# - sprint_manager.py
+# - task_manager.py
+
+# Standard library modules used (no installation needed):
+# - json
+# - os
+# - sys
+# - datetime
+# - pathlib
+# - argparse
+# - re
+# - subprocess
+# - heapq
+# - shutil
+
+# Python version requirement
+# python>=3.8
+
+# All dependencies are satisfied by Python standard library
+# No additional packages need to be installed
