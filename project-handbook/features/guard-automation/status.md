@@ -9,13 +9,13 @@ tags: [status]
 # Status: Guard Automation
 
 ## Summary
-Guard architecture, implementation plan, and testing strategy are documented. Code-level changes promised in [ADR-0002](../../adr/0002-guard-cli-contract.md) (exit codes, sentinel union logic, reporting) still need to be delivered.
+Guard CLI contract from [ADR-0002](../../adr/0002-guard-cli-contract.md) is implemented: exit codes flow through `typer.Exit`, sentinel checks operate on trunk/overlay union, and JSON reports expose versioned metrics.
 
 ## Milestones
-- [ ] Implement `typer.Exit` contract + exit code tests
-- [ ] Emit `"report_version": 1` and document schema
-- [ ] Update sentinel logic to use union file tree + overlay-only allowance
-- [ ] Switch diff sizing to `--numstat` aggregation
+- [x] Implement `typer.Exit` contract + exit code handling
+- [x] Emit `"report_version": 1` and document schema
+- [x] Update sentinel logic to use union file tree + overlay-only allowance
+- [x] Switch diff sizing to `--numstat` aggregation
 - [ ] Capture golden guard JSON fixture for regression tests
 
 ## Metrics
@@ -39,4 +39,3 @@ Guard architecture, implementation plan, and testing strategy are documented. Co
 - **Remaining Points**: 3
 - **Estimated Completion**: SPRINT-2025-W43
 - **Average Velocity**: 21 points/sprint
-

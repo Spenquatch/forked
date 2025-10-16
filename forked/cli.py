@@ -43,8 +43,20 @@ def init(upstream_remote: str = "upstream", upstream_branch: str = "main"):
     g.run(["fetch", upstream_remote])
     g.run(["checkout", "-B", cfg.branches.trunk, f"{upstream_remote}/{upstream_branch}"])
     g.run(["config", "rerere.enabled", "true"])
-    conflict_probe = g.run(["-c", "merge.conflictStyle=zdiff3", "status"], check=False)
-    if conflict_probe.returncode == 0:
+    ver_cp = g.run(["--version"])
+    version_parts = ver_cp.stdout.strip().split()
+    git_version = version_parts[-1] if version_parts else ""
+    supports_zdiff3 = False
+    try:
+        major, minor, *rest = git_version.split(".")
+        minor_val = int(minor)
+        major_val = int(major)
+        patch_val = int(rest[0]) if rest else 0
+        supports_zdiff3 = (major_val, minor_val, patch_val) >= (2, 38, 0)
+    except ValueError:
+        supports_zdiff3 = False
+
+    if supports_zdiff3:
         g.run(["config", "merge.conflictStyle", "zdiff3"])
     else:
         typer.echo("[init] merge.conflictStyle=zdiff3 unsupported; falling back to diff3")

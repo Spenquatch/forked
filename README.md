@@ -234,6 +234,7 @@ build-backend = "setuptools.build_meta"
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict, Optional
+import typer
 import yaml
 
 DEFAULT_CFG_PATH = Path("forked.yml")
@@ -297,7 +298,7 @@ class Config:
 
 def load_config(path: Path = DEFAULT_CFG_PATH) -> Config:
     if not path.exists():
-        raise SystemExit(3)
+        raise typer.Exit(code=3)
     data = yaml.safe_load(path.read_text())
     # Quick/dirty mapping (good enough for MVP)
     def _get(d, k, default):

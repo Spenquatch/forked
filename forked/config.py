@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
+import typer
 import yaml
 
 
@@ -79,7 +80,7 @@ class Config:
 def load_config(path: Path = DEFAULT_CFG_PATH) -> Config:
     """Load configuration from ``forked.yml``."""
     if not path.exists():
-        raise SystemExit(3)
+        raise typer.Exit(code=3)
 
     data = yaml.safe_load(path.read_text()) or {}
     upstream = Upstream(**data.get("upstream", {}))
