@@ -20,6 +20,7 @@ This is a **sprint-based project handbook** with complete automation. Everything
 ## Essential Commands
 
 ```bash
+# (run from project-handbook/)
 # Get your bearings
 make help               # See all available commands
 make dashboard          # Complete project overview
@@ -43,12 +44,23 @@ make task-status id=TASK-XXX status=done     # Mark complete
 
 ## Agent Workflow
 
+### Initial Setup & Demo Repo
+- Optional sample fork: `./scripts/setup-demo-repo.sh demo-forked`
+- Primary docs: README smoke/release checklists, `project-handbook/docs/DEMO_REPO.md`
+- ADRs to read first: `project-handbook/adr/0001-overlay-worktree-contract.md`, `project-handbook/adr/0002-guard-cli-contract.md`
+
 ### 1. **Understand Current Context**
 ```bash
+cd project-handbook
 make dashboard          # See sprint, features, release status
 make release-status     # Understand current release goals
 make task-list          # See available work
 ```
+
+**Current focus (v1.0.0)**
+- Release plan: `project-handbook/releases/v1.0.0/plan.md`
+- Features: `overlay-infrastructure`, `guard-automation`, `release-operations`
+- Sprint tasks live under `sprints/current/tasks/`; update status via `make task-status`
 
 ### 2. **Pick Up Task**
 ```bash
