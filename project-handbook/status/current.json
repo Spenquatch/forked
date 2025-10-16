@@ -1,0 +1,88 @@
+{
+  "generated_at": "2025-10-16T17:12:12Z",
+  "phases": [
+    {
+      "name": "SPRINT-2025-W38",
+      "phase": "SPRINT-2025-W38",
+      "title": "Sprint SPRINT-2025-W38",
+      "features": [
+        "guard-automation",
+        "overlay-infrastructure"
+      ],
+      "decisions": [
+        "ADR-0001",
+        "ADR-0002"
+      ],
+      "tasks": [
+        "TASK-002",
+        "TASK-001"
+      ]
+    }
+  ],
+  "totals": {
+    "backlog": 0,
+    "planned": 0,
+    "in_progress": 2,
+    "review": 0,
+    "blocked": 0,
+    "done": 0
+  },
+  "features": {
+    "guard-automation": {
+      "open": [
+        {
+          "id": "TASK-002",
+          "title": "Guard CLI Contract",
+          "sprint": "SPRINT-2025-W38",
+          "status": "in-progress",
+          "story_points": 3,
+          "prio": "P0",
+          "decision": "ADR-0002"
+        }
+      ],
+      "done": []
+    },
+    "overlay-infrastructure": {
+      "open": [
+        {
+          "id": "TASK-001",
+          "title": "Overlay Rebuild Hardening",
+          "sprint": "SPRINT-2025-W38",
+          "status": "in-progress",
+          "story_points": 5,
+          "prio": "P0",
+          "decision": "ADR-0001"
+        }
+      ],
+      "done": []
+    }
+  },
+  "features_summary": [
+    {
+      "key": "guard-automation",
+      "stage": null,
+      "now": [],
+      "next": [],
+      "risks": []
+    },
+    {
+      "key": "overlay-infrastructure",
+      "stage": null,
+      "now": [],
+      "next": [],
+      "risks": []
+    },
+    {
+      "key": "release-operations",
+      "stage": null,
+      "now": [],
+      "next": [],
+      "risks": []
+    }
+  ],
+  "project": {
+    "now": [],
+    "next": [],
+    "risks": []
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "report_version": 1,
+  "overlay": "overlay/smoke",
+  "trunk": "trunk",
+  "base": "9d2f1ca",
+  "violations": {
+    "sentinels": {
+      "must_match_upstream": ["api/contracts/v1.yaml"],
+      "must_diverge_from_upstream": []
+    },
+    "size_caps": {
+      "files": 3,
+      "loc": 42
+    }
+  },
+  "both_touched": ["src/service.py"],
+  "sentinels": {
+    "must_match_upstream": ["api/contracts/v1.yaml"],
+    "must_diverge_from_upstream": []
+  },
+  "size_caps": {
+    "files_changed": 3,
+    "loc": 42,
+    "violations": true
+  }
+}

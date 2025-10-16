@@ -779,6 +779,35 @@ jobs:
 
 ---
 
+# Local Setup & Demo Repository
+
+## Prerequisites
+- Git ≥ 2.31 (required for modern worktree commands)
+- Python ≥ 3.10 and `make`
+- Bash-compatible shell (the demo script uses POSIX utilities)
+
+## Create a Demo Fork (5–10 files, two patch branches)
+```bash
+./scripts/setup-demo-repo.sh demo-forked
+cd demo-forked
+```
+The script provisions:
+- Bare upstream + origin remotes
+- `trunk` with `api/contracts/v1.yaml` and `src/service.py`
+- Patch branches `patch/contract-update` and `patch/service-logging`
+- Sentinel directories `config/forked/**` (ours) and `branding/**` (theirs)
+
+This footprint keeps smoke runs fast (<5 seconds) while exercising worktree reuse, sentinel checks, and multi-commit cherry-picks. See `project-handbook/docs/DEMO_REPO.md` for details.
+
+## Regenerating the Guard Fixture
+After running the smoke checklist, refresh the JSON fixture for comparisons:
+```bash
+forked guard --overlay overlay/smoke --mode block --output .forked/report.json || true
+cp .forked/report.json project-handbook/tests/fixtures/guard-report-example.json
+```
+
+---
+
 # Developer Workflow (MVP)
 
 1. Keep patches tiny and focused (configurable caps later).
@@ -800,23 +829,99 @@ jobs:
 
 # Quick Smoke Checklist
 
-- `forked init` on a dirty tree → exits 4 with a clear stash/commit prompt.
-- `forked build --id v0` creates the worktree under `../.forked-worktrees/<repo>/v0/`.
-- Multi-commit `patch/*` branches surface every commit in `overlay/v0` (order preserved).
-- `must_match_upstream` flags when the overlay deletes a file that exists in trunk.
-- `must_diverge_from_upstream` allows overlay-only files but flags identical-or-missing cases.
-- `forked guard --mode block` exits 2 on violations and the JSON includes `"report_version": 1`.
-- `forked sync` returns you to whichever branch you started on.
-- `forked status --latest 2` shows the two most recent overlays ordered by commit date (with both-touched counts).
-- Re-running `forked build --id <same>` reuses the existing worktree and hard-resets it to today’s trunk before replaying patches.
+1. **Initial guardrails**
+   ```bash
+   git status --short
+   forked init
+   ```
+   Expect exit code `4` with message `Working tree not clean...` if uncommitted changes exist.
+
+2. **Overlay rebuild (run twice)**
+   ```bash
+   forked build --id smoke --auto-continue
+   forked build --id smoke --auto-continue
+   ```
+   Expected output:
+   ```
+   [green]Built overlay[/green] overlay/smoke
+   Worktree: ../.forked-worktrees/<repo>/smoke
+   ```
+   Re-running reports the same worktree path; no “already checked out” errors.
+
+3. **Verify commit stack & reuse**
+   ```bash
+   git log overlay/smoke --oneline | head -n 4
+   git worktree list --porcelain | grep overlay/smoke -A1
+   ```
+   Confirms ordered cherry-picks and reused worktree.
+
+4. **Guard policy check**
+ ```bash
+ forked guard --overlay overlay/smoke --mode block --output .forked/report.json || true
+ jq '.report_version, .violations' .forked/report.json
+ diff -u project-handbook/tests/fixtures/guard-report-example.json .forked/report.json | head
+  ```
+  Expect exit code `2` when violations exist and JSON output matching the bundled fixture (`project-handbook/tests/fixtures/guard-report-example.json`).
+
+5. **Sync & status**
+   ```bash
+   forked sync
+   forked status --latest 2
+   ```
+   `forked sync` returns you to the branch you started on; status lists the two most recent overlays by date.
+
+6. **Worktree cleanliness**
+   ```bash
+   repo_name=$(basename "$(git rev-parse --show-toplevel)")
+   git -C ../.forked-worktrees/$repo_name/smoke status --short
+   ```
+   Output should be empty.
 
 ---
 
 # Quick Release Checklist
 
-- Tag & push: `git tag v0.1.0 && git push --tags`
-- CI green with editable install (`python -m pip install -e .`)
-- Sanity run: `forked init → sync → build --id test → guard --mode block → publish --remote origin`
+1. **Install & sanity check CI flow**
+   ```bash
+   python -m pip install --upgrade pip
+   python -m pip install -e .
+   forked --version
+   ```
+
+2. **Full dry run**
+   ```bash
+   forked init
+   forked sync
+   forked build --id release-check --auto-continue
+   forked guard --overlay overlay/release-check --mode block --output .forked/report.json
+   ```
+   Inspect `.forked/report.json`; compare to `project-handbook/tests/fixtures/guard-report-example.json`.
+
+3. **Publish rehearsal (optional push)**
+   ```bash
+ forked publish --overlay overlay/release-check --tag overlay/release-check --remote origin --push
+ ```
+ For dry runs, omit `--push` or target a staging remote.
+
+  **Rollback:** If publish fails mid-flight, clean up with
+  ```bash
+  git push --delete origin overlay/release-check || true
+  git tag -d overlay/release-check || true
+  git worktree prune
+  ```
+  Then rerun the smoke checklist before attempting again.
+
+4. **Release tagging**
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   git push
+   ```
+
+5. **Docs & backlog**
+   - Update `project-handbook/releases/v1.0.0.md` highlights.
+   - Append entry to `project-handbook/releases/CHANGELOG.md`.
+   - Verify backlog items (`forked clean`, `forked status --json`) remain open for post-release work.
 
 ---
 
