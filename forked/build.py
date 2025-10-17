@@ -1,6 +1,8 @@
 """Overlay build workflows."""
 
+import json
 import os
+import re
 from pathlib import Path
 from typing import List, Optional, Tuple
 import typer
@@ -31,9 +33,26 @@ def _apply_path_bias(cfg: Config, cwd: Optional[str] = None) -> bool:
     return applied
 
 
+WINDOWS_ABS_PATTERN = re.compile(r"^[A-Za-z]:[\\/]")
+
+
+def _looks_like_windows_absolute(raw: str) -> bool:
+    return bool(WINDOWS_ABS_PATTERN.match(raw))
+
+
 def _resolve_worktree_dir(cfg: Config, overlay_id: str) -> Path:
     root_override = os.environ.get("FORKED_WORKTREES_DIR")
-    base_root = Path(root_override) if root_override else Path(cfg.worktree.root)
+    raw_root = root_override or cfg.worktree.root
+
+    if _looks_like_windows_absolute(raw_root):
+        if os.name != "nt":
+            typer.echo(
+                "[build] Provided worktree root looks like a Windows path but the current platform "
+                "is POSIX. Set $FORKED_WORKTREES_DIR to an absolute POSIX path instead."
+            )
+            raise typer.Exit(code=4)
+
+    base_root = Path(raw_root)
     repo = g.repo_root()
     candidate = base_root / overlay_id
 
@@ -49,6 +68,10 @@ def _resolve_worktree_dir(cfg: Config, overlay_id: str) -> Path:
     parent.mkdir(parents=True, exist_ok=True)
 
     if target.exists():
+        typer.echo(
+            f"[build] Worktree directory '{target}' already exists; suffixing. "
+            "Run 'git worktree prune' to clean up stale entries."
+        )
         suffix = 1
         while True:
             alt = parent / f"{target.name}-{suffix}"
@@ -77,6 +100,8 @@ def build_overlay(
     g.run(["checkout", "-B", cfg.branches.trunk, f"{cfg.upstream.remote}/{cfg.upstream.branch}"])
 
     overlay = f"{cfg.branches.overlay_prefix}{overlay_id}"
+    wt_existing: Optional[Path] = None
+    applied_commits: List[dict] = []
     if use_worktree and cfg.worktree.enabled:
         wt_existing = g.worktree_for_branch(overlay)
         if wt_existing and not wt_existing.exists():
@@ -104,6 +129,7 @@ def build_overlay(
         if not commits:
             typer.echo(f"[build] {branch} already contained in {cfg.branches.trunk}; skipping")
             continue
+        applied_commits.append({"branch": branch, "commits": commits})
         for sha in commits:
             cp = g.run(["cherry-pick", "-x", sha], cwd=cwd, check=False)
             if cp.returncode != 0:
@@ -119,4 +145,13 @@ def build_overlay(
 
     if use_worktree and cfg.worktree.enabled and prev_ref:
         g.run(["checkout", prev_ref])
+
+    telemetry = {
+        "event": "forked.build",
+        "overlay": overlay,
+        "worktree": str(wt_path),
+        "reused_worktree": bool(wt_existing),
+        "patches": applied_commits,
+    }
+    typer.echo(f"[build.log] {json.dumps(telemetry)}")
     return overlay, wt_path
