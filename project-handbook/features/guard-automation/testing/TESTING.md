@@ -16,6 +16,7 @@ tags: [testing, guard]
    - Exit code should be `2`.
    - `.forked/report.json` must include `"report_version": 1` and violation details.
 3. Re-run with `--mode warn`; exit should be `0` while violations remain reported.
+4. Use `--verbose` to list sentinel matches and confirm the debug section is appended to `.forked/report.json`.
 
 ## Size Cap Verification
 1. Create overlay with >N files changed (configure `size_caps.max_files=1`).

@@ -1,6 +1,6 @@
   1. Clean slate / scaffold
 
-     rm -rf demo-forked demo-forked-origin.git demo-forked-upstream.git .forked-worktrees
+     rm -rf demo-forked demo-forked-origin.git demo-forked-upstream.git .forked
      ./scripts/setup-demo-repo.sh demo-forked
      cd demo-forked
      git checkout -b main origin/main

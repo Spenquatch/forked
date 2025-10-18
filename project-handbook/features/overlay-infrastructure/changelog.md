@@ -9,7 +9,7 @@ tags: [changelog]
 # Changelog
 
 ## 2025-10-16
-- Shipped ADR-0001 overlay contract: relocation to `.forked-worktrees/`, worktree reuse reset flow, and merge-range cherry-picks with path-bias support.
+- Shipped ADR-0001 overlay contract: overlays now live under `.forked/worktrees/`, reuse reset flow, and merge-range cherry-picks with path-bias support.
 - Verified smoke checklist (double rebuild + guard) and updated README guard/build documentation.
 
 ## 2025-09-22

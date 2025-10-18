@@ -21,7 +21,33 @@ def ensure_clean():
     """Ensure the current repository has no staged or unstaged changes."""
     out = run(["status", "--porcelain"], check=True).stdout.strip()
     if out:
-        typer.echo("[git] Working tree not clean. Commit or stash first.")
+        typer.echo("[forked] Current forked working tree is not clean. Commit or stash first.")
+        staged: list[str] = []
+        unstaged: list[str] = []
+        untracked: list[str] = []
+        for line in out.splitlines():
+            if line.startswith("??"):
+                untracked.append(line[3:])
+            else:
+                staged_flag, unstaged_flag = line[0], line[1]
+                path = line[3:]
+                if staged_flag != " ":
+                    staged.append(path)
+                if unstaged_flag != " ":
+                    unstaged.append(path)
+
+        if staged:
+            typer.echo("[git] Staged changes:")
+            for path in staged:
+                typer.secho(f"  {path}", fg=typer.colors.GREEN)
+        if unstaged:
+            typer.echo("[git] Unstaged changes:")
+            for path in unstaged:
+                typer.secho(f"  {path}", fg=typer.colors.RED)
+        if untracked:
+            typer.echo("[git] Untracked files:")
+            for path in untracked:
+                typer.secho(f"  {path}", fg=typer.colors.RED)
         raise typer.Exit(code=4)
 
 

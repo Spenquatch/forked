@@ -9,10 +9,10 @@ tags: [status]
 # Status: Overlay Infrastructure
 
 ## Summary
-ADR-0001 overlay worktree contract is in place: builds relocate into `.forked-worktrees/`, reuse existing branches safely, and cherry-pick full ranges with path-bias assistance.
+ADR-0001 overlay worktree contract is in place: builds store overlays under `.forked/worktrees/`, reuse existing branches safely, and cherry-pick full ranges with path-bias assistance.
 
 ## Milestones
-- [x] Implement sibling `.forked-worktrees/` relocation + suffixing logic
+- [x] Implement `.forked/worktrees/` storage + suffixing logic
 - [x] Reuse existing overlay worktrees with automated resets
 - [x] Switch cherry-pick loop to full ranges + structured logging
 - [ ] Document + automate smoke checklist execution in CI

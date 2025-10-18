@@ -41,7 +41,7 @@ forked guard --overlay overlay/test --mode warn
 
 # Verify sentinel behaviour when deleting trunk-owned file
 repo_name=$(basename "$(git rev-parse --show-toplevel)")
-git -C ../.forked-worktrees/$repo_name/test rm README.md
+git -C .forked/worktrees/test rm README.md
 forked guard --overlay overlay/test --mode warn || true
 ```
 

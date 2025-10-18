@@ -26,14 +26,14 @@ make validate
 
 ### Build Behaviour
 1. **Worktree Location**
-   - [ ] After first build, worktree lives at `../.forked-worktrees/<repo>/smoke`
+- [ ] After first build, worktree lives at `.forked/worktrees/smoke`
    - [ ] After second build, same path reused (no duplicate directories)
 2. **Cleanliness**
    - [ ] `git status` inside reused worktree reports clean before cherry-picks
    - [ ] No leftover conflict markers after auto-continue path bias
 
 ### Edge Cases
-- [ ] Remove `.forked-worktrees/<repo>/smoke` and rebuild to ensure suffixing works
+- [ ] Remove `.forked/worktrees/smoke` and rebuild to ensure suffixing works
 - [ ] Set `FORKED_WORKTREES_DIR` to an absolute path and confirm relocation still works
 - [ ] Run with `--no-worktree` to ensure fallback behaviour unchanged
 

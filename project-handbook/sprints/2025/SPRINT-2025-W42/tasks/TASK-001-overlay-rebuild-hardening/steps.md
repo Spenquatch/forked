@@ -51,13 +51,13 @@ Detailed step-by-step guide to finish the overlay infrastructure work required f
 
 ### Actions
 - [ ] Run `forked build --id test --auto-continue` twice (expect reuse)
-- [ ] Inspect `.forked-worktrees/<repo>/test` location and cleanliness
+- [ ] Inspect `.forked/worktrees/test` location and cleanliness
 - [ ] Execute README smoke checklist steps covering build + guard
 - [ ] Capture notes for release plan + changelog
 
 ### Expected Outcome
 - Smoke checklist passes without manual clean-up
-- Worktree path matches plan (`../.forked-worktrees/...`)
+- Worktree path matches plan (`.forked/worktrees/...`)
 - Release plan + feature status updated
 - Ready for review
 

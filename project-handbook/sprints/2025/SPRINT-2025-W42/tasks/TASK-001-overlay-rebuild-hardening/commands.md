@@ -41,8 +41,7 @@ make daily
 forked guard --overlay overlay/test --mode warn
 
 # Clean up worktree when required
-repo_name=$(basename "$(git rev-parse --show-toplevel)")
-rm -rf ../.forked-worktrees/$repo_name/test || true
+rm -rf .forked/worktrees/test || true
 ```
 
 ## Git Integration

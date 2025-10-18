@@ -17,11 +17,12 @@ tags: [architecture, git, overlays]
 ## Worktree Layout
 ```
 repo/
-├── .forked-worktrees/          # sibling directory (outside repo work tree)
+├── .forked/
+│   └── worktrees/              # overlay worktrees (one directory per overlay id)
 │   └── <repo-name>/<overlay-id>/  # overlay-specific worktree checkout
 └── (repo files...)
 ```
-- Relative `worktree.root` values are relocated to a sibling `.forked-worktrees/<repo>/<id>` path to avoid Git’s “inside work tree” restriction.
+- Relative `worktree.root` values land under `.forked/worktrees/<id>`; users can override the location via `$FORKED_WORKTREES_DIR` if needed.
 - Rebuilds reuse existing worktrees when present; the automation resets them to `trunk` before cherry-picking.
 
 ## Build Flow Overview

@@ -16,16 +16,15 @@ Guard CLI contract from [ADR-0002](../../adr/0002-guard-cli-contract.md) is impl
 - [x] Emit `"report_version": 1` and document schema
 - [x] Update sentinel logic to use union file tree + overlay-only allowance
 - [x] Switch diff sizing to `--numstat` aggregation
-- [ ] Capture golden guard JSON fixture for regression tests
+- [x] Capture golden guard JSON fixture for regression tests
 
 ## Metrics
 - Policy coverage: 100% of documented guard checks
-- CI readiness: pending pipeline dry run
+- CI readiness: pending pipeline dry run (guard not yet wired into CI template)
 
 ## Next Steps
-1. Produce golden guard report for sample repo (`.forked/report.json`).
-2. Dry-run GitHub Action guard step with editable install.
-3. File follow-up backlog item for guard JSON fixture testing.
+1. Dry-run GitHub Action guard step with editable install.
+2. Capture guard artefacts via handbook automation (`make release-status`).
 
 ## Active Work (auto-generated)
 *Last updated: 2025-10-16*
@@ -35,7 +34,7 @@ Guard CLI contract from [ADR-0002](../../adr/0002-guard-cli-contract.md) is impl
 
 ### Metrics
 - **Total Story Points**: 3 (planned)
-- **Completed Points**: 0 (0%)
-- **Remaining Points**: 3
-- **Estimated Completion**: SPRINT-2025-W43
+- **Completed Points**: 3 (100%)
+- **Remaining Points**: 0
+- **Estimated Completion**: n/a (feature dev complete; follow-ups tracked separately)
 - **Average Velocity**: 21 points/sprint

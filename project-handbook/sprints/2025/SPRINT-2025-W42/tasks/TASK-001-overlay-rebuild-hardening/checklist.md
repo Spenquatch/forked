@@ -17,7 +17,7 @@ links: []
 
 ## Testing
 - [ ] `forked build --id smoke --auto-continue` succeeds twice without manual cleanup
-- [ ] Resulting worktree path sits under `../.forked-worktrees/<repo>/smoke`
+- [ ] Resulting worktree path sits under `.forked/worktrees/smoke`
 - [ ] Guard run after rebuild exits with documented codes
 - [ ] Edge cases: missing `$FORKED_WORKTREES_DIR`, existing directory suffixing
 

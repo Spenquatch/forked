@@ -21,7 +21,7 @@ Outcomes
 - CLI exits with `typer.Exit` codes surfaced in README checklists.
 
 State
-- Stage: in-progress
+- Stage: maintained
 - Owner: @ai-agent
 
 Backlog Integration

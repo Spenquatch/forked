@@ -12,6 +12,7 @@ tags: [changelog]
 - Hardened guard CLI exit codes with `typer.Exit` (0 success, 2 violations, 3 config errors, 4 git issues).
 - Added `"report_version": 1` field and diff metrics sourced from `git diff --numstat`.
 - Updated sentinel union logic to treat overlay-only paths as compliant divergence and documented schema updates.
+- Introduced `--verbose` guard mode plus `.forked/logs/forked-guard.log` telemetry for deeper diagnostics.
 
 ## 2025-09-22
 - Documented guard workflow, sentinel logic, and test matrix.

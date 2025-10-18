@@ -15,7 +15,7 @@ tags: [implementation, plan]
 
 ## Work Breakdown
 1. **Path Resolution**
-   - [x] Update `_resolve_worktree_dir` to normalise the desired root, relocate relative paths to `../.forked-worktrees/<repo>/<id>`, and ensure parent directories exist.
+   - [x] Update `_resolve_worktree_dir` to normalise the desired root, place relative paths under `.forked/worktrees/<id>`, and ensure parent directories exist.
    - [x] Honor `$FORKED_WORKTREES_DIR` when provided; add unit guard for absolute Windows-style paths.
    - [x] Implement collision handling by suffixing `<id>-N` when the target directory already exists; add warning log advising `git worktree prune`.
 2. **Worktree Reuse**
@@ -29,7 +29,7 @@ tags: [implementation, plan]
 
 ## Validation
 - Run `forked build --id test --auto-continue` twice to confirm reuse.
-- Inspect `.forked-worktrees/<repo>/<id>` to ensure location and cleanup semantics.
+- Inspect `.forked/worktrees/<id>` to ensure location and cleanup semantics.
 - Execute quick smoke checklist (see README) to cover rebuild + guard path.
 
 ## Risks & Mitigations

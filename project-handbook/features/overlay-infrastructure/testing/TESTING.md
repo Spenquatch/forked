@@ -18,11 +18,11 @@ tags: [testing, git, overlays]
 2. Run `forked build --id smoke --auto-continue`.
 3. Re-run the same command. Expect:
    - No “already checked out” errors.
-   - Worktree path reused under `../.forked-worktrees/<repo>/smoke`.
+   - Worktree path reused under `.forked/worktrees/smoke`.
 4. Inspect worktree cleanliness:
    ```bash
    repo_name=$(basename "$(git rev-parse --show-toplevel)")
-   git -C ../.forked-worktrees/$repo_name/smoke status --short
+   git -C .forked/worktrees/smoke status --short
    ```
    Output should be empty.
 
@@ -36,7 +36,7 @@ tags: [testing, git, overlays]
    ```
 
 ## Failure Scenarios to Exercise
-- Delete `.forked-worktrees/<repo>/<id>` manually and rebuild: automation should suffix with `-1` rather than failing.
+- Delete `.forked/worktrees/<id>` manually and rebuild: automation should suffix with `-1` rather than failing.
 - Set `FORKED_WORKTREES_DIR=/tmp/forked` and repeat smoke test to validate absolute path handling.
 - Introduce conflicting changes between trunk and patch branches; confirm path bias logs remaining conflicts for manual intervention.
 

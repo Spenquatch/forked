@@ -80,6 +80,10 @@ class Config:
 def load_config(path: Path = DEFAULT_CFG_PATH) -> Config:
     """Load configuration from ``forked.yml``."""
     if not path.exists():
+        typer.secho(
+            "fatal: not a forked repository. Run `forked init` to configure this repo.",
+            fg=typer.colors.RED,
+        )
         raise typer.Exit(code=3)
 
     data = yaml.safe_load(path.read_text()) or {}
