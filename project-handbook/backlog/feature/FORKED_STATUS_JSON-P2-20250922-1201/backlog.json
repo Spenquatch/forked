@@ -1,0 +1,14 @@
+[
+  {
+    "id": "FUTURE-0001",
+    "title": "Guard CI integration",
+    "status": "todo",
+    "notes": "Add optional guard invocation to CI pipelines and surface guard artefacts via automation"
+  },
+  {
+    "id": "FUTURE-0002",
+    "title": "Real-repo ergonomics smoke testing",
+    "status": "todo",
+    "notes": "Run forked build/guard against real remotes to validate workflow UX and performance"
+  }
+]

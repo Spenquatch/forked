@@ -20,11 +20,10 @@ Guard CLI contract from [ADR-0002](../../adr/0002-guard-cli-contract.md) is impl
 
 ## Metrics
 - Policy coverage: 100% of documented guard checks
-- CI readiness: pending pipeline dry run (guard not yet wired into CI template)
+- CI readiness: follow-up item captured in backlog (consider CI wiring in future iteration)
 
 ## Next Steps
-1. Dry-run GitHub Action guard step with editable install.
-2. Capture guard artefacts via handbook automation (`make release-status`).
+1. Conduct smoke testing against real remote repos to validate ergonomics.
 
 ## Active Work (auto-generated)
 *Last updated: 2025-10-16*
