@@ -1,0 +1,41 @@
+version: v1.1.0
+start_sprint: SPRINT-2025-W43
+end_sprint: SPRINT-2025-W43
+planned_sprints: 1
+features:
+  feature-slice-workflows:
+    type: regular
+    priority: P0
+    status: planned
+    completion: 0
+    critical_path: true
+  conflict-bundle-automation:
+    type: regular
+    priority: P0
+    status: planned
+    completion: 0
+    critical_path: true
+  guard-automation:
+    type: regular
+    priority: P0
+    status: planned
+    completion: 0
+    critical_path: true
+  status-json:
+    type: regular
+    priority: P0
+    status: planned
+    completion: 0
+    critical_path: true
+  clean-command:
+    type: regular
+    priority: P0
+    status: planned
+    completion: 0
+    critical_path: true
+  release-operations:
+    type: regular
+    priority: P1
+    status: planned
+    completion: 0
+    critical_path: false

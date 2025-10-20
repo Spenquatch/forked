@@ -1,0 +1,19 @@
+id: TASK-007
+title: Status JSON CLI
+feature: status-json
+decision: ADR-0005
+owner: @ai-agent
+status: todo
+story_points: 2
+depends_on: [TASK-003]
+prio: P0
+due: 2025-10-24
+acceptance:
+  - `forked status --json` emits `status_version: 1` payload with upstream, trunk, patch drift, and overlay list (default latest 5).
+  - Overlay `selection.features`/`patches` populated from provenance log/notes; fallback path logged.
+  - `--latest N` flag adjusts overlay window; empty state handled gracefully.
+  - README/handbook document schema, examples, and `jq` usage.
+links:
+  - ../../../../adr/0005-operational-tooling.md
+  - ../../../../../Forked CLI Expansion Implementation Plan.md
+  - ../../../../features/status-json/implementation/plan.md

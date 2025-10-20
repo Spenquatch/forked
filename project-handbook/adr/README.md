@@ -14,6 +14,9 @@ Use ADRs for cross-cutting, multi-feature decisions. Feature-specific decisions 
 
 - **ADR-0001**: Overlay Worktree Contract
 - **ADR-0002**: Guard CLI Contract
+- **ADR-0003**: Feature Slice Workflows
+- **ADR-0004**: Conflict Bundle Automation
+- **ADR-0005**: Operational Tooling Enhancements
 
 Naming & Status
 - File: `0001-<slug>.md` with id `ADR-0001` in front matter
@@ -31,4 +34,3 @@ Naming & Status
 - AI-Powered P0 Issue Triage System (draft)
 
 *Note: Create these ADRs as your team formalizes these decisions*
-

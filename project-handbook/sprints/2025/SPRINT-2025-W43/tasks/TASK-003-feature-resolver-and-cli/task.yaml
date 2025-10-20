@@ -1,0 +1,20 @@
+id: TASK-003
+title: Feature Resolver & CLI
+feature: feature-slice-workflows
+decision: ADR-0003
+owner: @ai-agent
+status: todo
+story_points: 5
+depends_on: []
+prio: P0
+due: 2025-10-24
+acceptance:
+  - Resolver selects patches via overlay profiles, feature lists, include/exclude filters while preserving global order.
+  - `forked feature create` scaffolds numbered patch branches and updates `forked.yml`.
+  - `forked feature status` reports slice ahead/behind counts and merged indicators.
+  - `forked build --skip-upstream-equivalents` skips upstream-equivalent commits and logs counts per patch.
+  - Provenance entries recorded in `.forked/logs/forked-build.log` (and optional git notes) capture patches, features, resolver, and commit ranges for guard/status consumers.
+links:
+  - ../../../../adr/0003-feature-slice-workflows.md
+  - ../../../../../Forked CLI Expansion Implementation Plan.md
+  - ../../../../features/feature-slice-workflows/implementation/plan.md

@@ -1,0 +1,19 @@
+id: TASK-006
+title: Guard Policy Overrides & Report v2
+feature: guard-automation
+decision: ADR-0002
+owner: @ai-agent
+status: todo
+story_points: 3
+depends_on: [TASK-003]
+prio: P0
+due: 2025-10-24
+acceptance:
+  - Guard reads override trailers from overlay commits, publish tags, and `refs/notes/forked/override` (respecting `policy_overrides` config).
+  - `guards.mode=require-override` fails without valid override and passes with allowed override values; disallowed scopes fail with clear messaging.
+  - `.forked/report.json` increments to `report_version: 2` and includes `override` and `features` blocks.
+  - Tests cover commit/tag/note overrides, allowed/disallowed scope combinations, and provenance fallback.
+links:
+  - ../../../../adr/0002-guard-cli-contract.md
+  - ../../../../../Forked CLI Expansion Implementation Plan.md
+  - ../../../../features/guard-automation/implementation/plan.md

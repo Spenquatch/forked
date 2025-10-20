@@ -1,0 +1,20 @@
+id: TASK-008
+title: Clean Command Implementation
+feature: clean-command
+decision: ADR-0005
+owner: @ai-agent
+status: todo
+story_points: 3
+depends_on: [TASK-003]
+prio: P0
+due: 2025-10-24
+acceptance:
+  - `forked clean` defaults to dry-run summarising worktrees, overlays, conflict bundles; executing destructive actions requires `--confirm` (or rerun without `--dry-run`).
+  - `--keep N` and `--overlays <age|pattern>` logic protects tagged/active overlays and retains newest N overlays.
+  - `--worktrees` prunes stale entries (via `git worktree prune` + filesystem checks) without touching active worktrees.
+  - `--conflicts` removes outdated bundles (default >14 days) while preserving latest per overlay.
+  - Documentation covers usage patterns and safety rails.
+links:
+  - ../../../../adr/0005-operational-tooling.md
+  - ../../../../../Forked CLI Expansion Implementation Plan.md
+  - ../../../../features/clean-command/implementation/plan.md

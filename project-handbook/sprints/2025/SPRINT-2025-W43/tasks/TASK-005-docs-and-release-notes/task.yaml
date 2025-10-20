@@ -1,0 +1,19 @@
+id: TASK-005
+title: Docs & Release Notes Refresh
+feature: release-operations
+decision: ADR-0003
+owner: @ai-agent
+status: todo
+story_points: 1
+depends_on: [TASK-003, TASK-004, TASK-006, TASK-007, TASK-008]
+prio: P1
+due: 2025-10-24
+acceptance:
+  - README documents feature slices, overlay profiles, and conflict bundle usage with examples.
+  - README/handbook include new sections for policy overrides, `forked status --json`, `forked clean`, `--skip-upstream-equivalents`, and sync auto-continue guidance.
+  - Release changelog (`project-handbook/releases/CHANGELOG.md`) updated with v1.1.0 highlights.
+  - Handbook feature pages linked from status/roadmap and validated via `make validate`.
+links:
+  - ../../../../adr/0003-feature-slice-workflows.md
+  - ../../../../../Forked CLI Expansion Implementation Plan.md
+  - ../../../../features/release-operations/status.md
