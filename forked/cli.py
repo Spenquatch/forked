@@ -1,29 +1,31 @@
 """Forked CLI Typer entrypoint."""
 
+import json
+import shutil
 from collections import defaultdict
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from fnmatch import fnmatch
-import json
 from pathlib import Path
-import shutil
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Annotated, Any
+
 import typer
 from rich import print as rprint
-from .config import Config, Feature, load_config, write_config, write_skeleton
+
 from . import gitutil as g
 from .build import build_overlay
+from .config import Config, Feature, load_config, write_config, write_skeleton
 from .guards import both_touched, sentinels, size_caps
-from .sync import run_sync
 from .resolver import ResolutionError, resolve_selection
-
+from .sync import run_sync
 
 app = typer.Typer(add_completion=False)
 feature_app = typer.Typer(help="Feature slice management")
 app.add_typer(feature_app, name="feature")
 
 
-def _parse_csv_option(raw: Optional[str]) -> List[str]:
+def _parse_csv_option(raw: str | None) -> list[str]:
     if not raw:
         return []
     items = []
@@ -34,7 +36,7 @@ def _parse_csv_option(raw: Optional[str]) -> List[str]:
     return items
 
 
-def _ahead_behind(trunk: str, branch: str) -> Optional[Tuple[int, int]]:
+def _ahead_behind(trunk: str, branch: str) -> tuple[int, int] | None:
     cp = g.run(["rev-list", "--left-right", "--count", f"{trunk}...{branch}"], check=False)
     if cp.returncode != 0:
         return None
@@ -49,10 +51,10 @@ def _ahead_behind(trunk: str, branch: str) -> Optional[Tuple[int, int]]:
     return behind, ahead
 
 
-def _overlays_by_date(prefix: str) -> List[Tuple[str, int]]:
+def _overlays_by_date(prefix: str) -> list[tuple[str, int]]:
     fmt = "%(refname:short)|%(committerdate:unix)"
     cp = g.run(["for-each-ref", f"--format={fmt}", f"refs/heads/{prefix}"])
-    items: List[Tuple[str, int]] = []
+    items: list[tuple[str, int]] = []
     for line in cp.stdout.splitlines():
         if "|" not in line:
             continue
@@ -64,7 +66,7 @@ def _overlays_by_date(prefix: str) -> List[Tuple[str, int]]:
     return sorted(items, key=lambda item: item[1], reverse=True)
 
 
-def _parse_iso_timestamp(raw: str) -> Optional[datetime]:
+def _parse_iso_timestamp(raw: str) -> datetime | None:
     if not raw:
         return None
     value = raw.strip()
@@ -76,18 +78,18 @@ def _parse_iso_timestamp(raw: str) -> Optional[datetime]:
         return None
 
 
-def _format_timestamp_utc(ts: Optional[datetime]) -> Optional[str]:
+def _format_timestamp_utc(ts: datetime | None) -> str | None:
     if ts is None:
         return None
     return ts.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _load_latest_build_entries() -> Dict[str, Tuple[Optional[datetime], Dict[str, Any]]]:
+def _load_latest_build_entries() -> dict[str, tuple[datetime | None, dict[str, Any]]]:
     repo = g.repo_root()
     log_path = repo / ".forked" / "logs" / "forked-build.log"
     if not log_path.exists():
         return {}
-    latest: Dict[str, Tuple[Optional[datetime], Dict[str, Any]]] = {}
+    latest: dict[str, tuple[datetime | None, dict[str, Any]]] = {}
     for raw_line in log_path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line:
@@ -119,13 +121,13 @@ def _load_latest_build_entries() -> Dict[str, Tuple[Optional[datetime], Dict[str
     return latest
 
 
-def _read_overlay_note(overlay: str) -> Optional[Dict[str, Any]]:
+def _read_overlay_note(overlay: str) -> dict[str, Any] | None:
     cp = g.run(["notes", "--ref", "refs/notes/forked-meta", "show", overlay], check=False)
     if cp.returncode != 0 or not cp.stdout.strip():
         return None
-    features: List[str] = []
-    patches: List[str] = []
-    overlay_profile: Optional[str] = None
+    features: list[str] = []
+    patches: list[str] = []
+    overlay_profile: str | None = None
     skip_equivalents = False
     for raw_line in cp.stdout.splitlines():
         line = raw_line.strip()
@@ -151,7 +153,7 @@ def _read_overlay_note(overlay: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def _load_guard_report() -> Optional[Dict[str, Any]]:
+def _load_guard_report() -> dict[str, Any] | None:
     repo = g.repo_root()
     path = repo / ".forked" / "report.json"
     if not path.exists():
@@ -167,9 +169,9 @@ def _load_guard_report() -> Optional[Dict[str, Any]]:
         return None
 
 
-def _selection_from_log(entry: Dict[str, Any]) -> Dict[str, Any]:
+def _selection_from_log(entry: dict[str, Any]) -> dict[str, Any]:
     raw = entry.get("selection") or {}
-    selection: Dict[str, Any] = {
+    selection: dict[str, Any] = {
         "source": "provenance-log",
         "features": raw.get("features", []),
         "patches": raw.get("patches", []),
@@ -194,9 +196,11 @@ def _selection_from_log(entry: Dict[str, Any]) -> Dict[str, Any]:
     return selection
 
 
-def _derived_selection(cfg: Config, overlay_branch: str) -> Dict[str, Any]:
+def _derived_selection(cfg: Config, overlay_branch: str) -> dict[str, Any]:
     prefix = cfg.branches.overlay_prefix
-    overlay_id = overlay_branch[len(prefix) :] if overlay_branch.startswith(prefix) else overlay_branch
+    overlay_id = (
+        overlay_branch[len(prefix) :] if overlay_branch.startswith(prefix) else overlay_branch
+    )
     typer.secho(
         f"[status] Provenance missing for {overlay_branch}; deriving selection from configuration.",
         fg=typer.colors.YELLOW,
@@ -228,11 +232,13 @@ def _derived_selection(cfg: Config, overlay_branch: str) -> Dict[str, Any]:
 
 
 def _selection_for_overlay(
-    cfg: Config, overlay_branch: str, build_entries: Optional[Dict[str, Tuple[Optional[datetime], Dict[str, Any]]]] = None
-) -> Dict[str, Any]:
+    cfg: Config,
+    overlay_branch: str,
+    build_entries: dict[str, tuple[datetime | None, dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
     """Return selection metadata for overlay from provenance log, git note, or resolver fallback."""
     entries = build_entries if build_entries is not None else _load_latest_build_entries()
-    selection: Dict[str, Any] = {}
+    selection: dict[str, Any] = {}
     entry = entries.get(overlay_branch)
     if entry:
         _, payload = entry
@@ -246,10 +252,10 @@ def _selection_for_overlay(
     return selection
 
 
-def _split_override_values(raw: str) -> List[str]:
+def _split_override_values(raw: str) -> list[str]:
     tokens = raw.replace(",", " ").split()
-    seen: Set[str] = set()
-    values: List[str] = []
+    seen: set[str] = set()
+    values: list[str] = []
     for token in tokens:
         value = token.strip().lower()
         if not value or value in seen:
@@ -259,9 +265,9 @@ def _split_override_values(raw: str) -> List[str]:
     return values
 
 
-def _collect_trailer_values(raw: str, trailer_key: str) -> List[str]:
+def _collect_trailer_values(raw: str, trailer_key: str) -> list[str]:
     key_lower = trailer_key.lower()
-    values: List[str] = []
+    values: list[str] = []
     for line in raw.splitlines():
         if ":" not in line:
             continue
@@ -272,24 +278,24 @@ def _collect_trailer_values(raw: str, trailer_key: str) -> List[str]:
     return values
 
 
-def _commit_override(trailer_key: str, commit: str) -> List[str]:
+def _commit_override(trailer_key: str, commit: str) -> list[str]:
     cp = g.run(
         ["show", "-s", f"--format=%(trailers:key={trailer_key},valueonly)", commit],
         check=False,
     )
     if cp.returncode != 0 or not cp.stdout.strip():
         return []
-    values: List[str] = []
+    values: list[str] = []
     for line in cp.stdout.splitlines():
         values.extend(_split_override_values(line))
     return values
 
 
-def _tag_override(trailer_key: str, commit: str) -> Tuple[List[str], Optional[str]]:
+def _tag_override(trailer_key: str, commit: str) -> tuple[list[str], str | None]:
     tag_list = g.run(["tag", "--points-at", commit], check=False)
     if tag_list.returncode != 0:
         return [], None
-    candidates: List[Tuple[int, str]] = []
+    candidates: list[tuple[int, str]] = []
     for tag in tag_list.stdout.splitlines():
         if not tag:
             continue
@@ -319,7 +325,7 @@ def _tag_override(trailer_key: str, commit: str) -> Tuple[List[str], Optional[st
     return [], None
 
 
-def _note_override(trailer_key: str, commit: str) -> List[str]:
+def _note_override(trailer_key: str, commit: str) -> list[str]:
     cp = g.run(
         ["notes", "--ref", "refs/notes/forked/override", "show", commit],
         check=False,
@@ -329,7 +335,7 @@ def _note_override(trailer_key: str, commit: str) -> List[str]:
     return _collect_trailer_values(cp.stdout, trailer_key)
 
 
-def _resolve_override(cfg: Config, overlay: str, commit: str) -> Dict[str, Any]:
+def _resolve_override(cfg: Config, overlay: str, commit: str) -> dict[str, Any]:
     trailer_key = cfg.policy_overrides.trailer_key or "Forked-Override"
     commit_values = _commit_override(trailer_key, commit)
     if commit_values:
@@ -346,8 +352,8 @@ def _resolve_override(cfg: Config, overlay: str, commit: str) -> Dict[str, Any]:
     return {"source": "none", "values": []}
 
 
-def _violation_scopes(violations: Dict[str, Any]) -> Set[str]:
-    scopes: Set[str] = set()
+def _violation_scopes(violations: dict[str, Any]) -> set[str]:
+    scopes: set[str] = set()
     if not violations:
         return scopes
     if "sentinels" in violations:
@@ -368,8 +374,8 @@ def _violation_scopes(violations: Dict[str, Any]) -> Set[str]:
 class _CleanAction:
     category: str
     description: str
-    command: Optional[List[str]] = None
-    path: Optional[Path] = None
+    command: list[str] | None = None
+    path: Path | None = None
 
 
 @dataclass
@@ -381,7 +387,7 @@ class _SkippedItem:
 @dataclass
 class _WorktreeInfo:
     path: Path
-    branch: Optional[str]
+    branch: str | None
 
 
 @dataclass
@@ -389,8 +395,8 @@ class _OverlayInfo:
     name: str
     commit: str
     commit_time: datetime
-    build_time: Optional[datetime]
-    tags: List[str]
+    build_time: datetime | None
+    tags: list[str]
     has_worktree: bool
     is_current: bool
 
@@ -402,19 +408,19 @@ class _OverlayInfo:
         return now - self.reference_time
 
 
-def _latest_build_times() -> Dict[str, datetime]:
+def _latest_build_times() -> dict[str, datetime]:
     entries = _load_latest_build_entries()
-    times: Dict[str, datetime] = {}
+    times: dict[str, datetime] = {}
     for overlay_name, (timestamp, _) in entries.items():
         if timestamp:
             times[overlay_name] = timestamp
     return times
 
 
-def _collect_worktrees() -> List[_WorktreeInfo]:
+def _collect_worktrees() -> list[_WorktreeInfo]:
     cp = g.run(["worktree", "list", "--porcelain"])
-    infos: List[_WorktreeInfo] = []
-    current: Dict[str, str] = {}
+    infos: list[_WorktreeInfo] = []
+    current: dict[str, str] = {}
     for line in cp.stdout.splitlines():
         if line.startswith("worktree "):
             if current:
@@ -446,7 +452,7 @@ def _collect_worktrees() -> List[_WorktreeInfo]:
     return infos
 
 
-def _short_branch(ref: Optional[str]) -> Optional[str]:
+def _short_branch(ref: str | None) -> str | None:
     if ref and ref.startswith("refs/heads/"):
         return ref[len("refs/heads/") :]
     return ref
@@ -455,10 +461,10 @@ def _short_branch(ref: Optional[str]) -> Optional[str]:
 def _list_overlay_infos(
     cfg: Config,
     worktrees: Sequence[_WorktreeInfo],
-    build_times: Dict[str, datetime],
+    build_times: dict[str, datetime],
     current_branch: str,
-) -> List[_OverlayInfo]:
-    repo = g.repo_root()
+) -> list[_OverlayInfo]:
+    g.repo_root()
     overlays_ref = g.run(
         [
             "for-each-ref",
@@ -470,11 +476,9 @@ def _list_overlay_infos(
     if overlays_ref.returncode != 0:
         return []
 
-    worktree_branch_set = {
-        _short_branch(info.branch) for info in worktrees if info.branch
-    }
+    worktree_branch_set = {_short_branch(info.branch) for info in worktrees if info.branch}
 
-    infos: List[_OverlayInfo] = []
+    infos: list[_OverlayInfo] = []
     for line in overlays_ref.stdout.splitlines():
         if not line or "|" not in line:
             continue
@@ -486,7 +490,9 @@ def _list_overlay_infos(
         except ValueError:
             commit_ts = datetime.now(timezone.utc)
         tags_cp = g.run(["tag", "--points-at", name_part], check=False)
-        tags = [tag for tag in tags_cp.stdout.splitlines() if tag] if tags_cp.returncode == 0 else []
+        tags = (
+            [tag for tag in tags_cp.stdout.splitlines() if tag] if tags_cp.returncode == 0 else []
+        )
         infos.append(
             _OverlayInfo(
                 name=name_part,
@@ -501,7 +507,7 @@ def _list_overlay_infos(
     return infos
 
 
-def _parse_age_spec(spec: str) -> Optional[timedelta]:
+def _parse_age_spec(spec: str) -> timedelta | None:
     raw = spec.strip().lower()
     if raw.endswith("d") and raw[:-1].isdigit():
         return timedelta(days=int(raw[:-1]))
@@ -523,14 +529,14 @@ def _plan_overlay_actions(
     keep: int,
     now: datetime,
     worktrees: Sequence[_WorktreeInfo],
-    build_times: Dict[str, datetime],
+    build_times: dict[str, datetime],
     current_branch: str,
-) -> Tuple[List[_CleanAction], List[_SkippedItem]]:
+) -> tuple[list[_CleanAction], list[_SkippedItem]]:
     if not overlays_filters:
         return [], []
 
-    age_threshold: Optional[timedelta] = None
-    patterns: List[str] = []
+    age_threshold: timedelta | None = None
+    patterns: list[str] = []
     for raw in overlays_filters:
         raw = raw.strip()
         if not raw:
@@ -559,19 +565,17 @@ def _plan_overlay_actions(
 
     if patterns:
         candidates = [
-            info
-            for info in candidates
-            if any(fnmatch(info.name, pattern) for pattern in patterns)
+            info for info in candidates if any(fnmatch(info.name, pattern) for pattern in patterns)
         ]
 
     keep_set = _compute_keep_set(infos, keep)
     default_overlay = next(iter(cfg.overlays.keys()), None)
-    default_overlay_branch: Optional[str] = None
+    default_overlay_branch: str | None = None
     if default_overlay:
         default_overlay_branch = f"{cfg.branches.overlay_prefix}{default_overlay}"
 
-    actions: List[_CleanAction] = []
-    skipped: List[_SkippedItem] = []
+    actions: list[_CleanAction] = []
+    skipped: list[_SkippedItem] = []
 
     for info in candidates:
         if info.name in keep_set:
@@ -638,11 +642,11 @@ def _plan_overlay_actions(
 
 def _plan_worktree_actions(
     worktrees: Sequence[_WorktreeInfo],
-) -> Tuple[List[_CleanAction], List[_SkippedItem]]:
+) -> tuple[list[_CleanAction], list[_SkippedItem]]:
     repo = g.repo_root()
     worktrees_dir = repo / ".forked" / "worktrees"
-    actions: List[_CleanAction] = []
-    skipped: List[_SkippedItem] = []
+    actions: list[_CleanAction] = []
+    skipped: list[_SkippedItem] = []
 
     actions.append(
         _CleanAction(
@@ -692,7 +696,7 @@ def _overlay_id_from_base(base: str) -> str:
 
 def _plan_conflict_actions(
     age: timedelta,
-) -> Tuple[List[_CleanAction], List[_SkippedItem]]:
+) -> tuple[list[_CleanAction], list[_SkippedItem]]:
     repo = g.repo_root()
     conflicts_dir = repo / ".forked" / "conflicts"
     if not conflicts_dir.exists():
@@ -703,7 +707,7 @@ def _plan_conflict_actions(
             )
         ]
 
-    entries: Dict[str, List[Tuple[Path, datetime]]] = {}
+    entries: dict[str, list[tuple[Path, datetime]]] = {}
     for child in conflicts_dir.iterdir():
         base = None
         if child.is_file() and child.suffix == ".json":
@@ -715,11 +719,13 @@ def _plan_conflict_actions(
         mtime = datetime.fromtimestamp(child.stat().st_mtime, tz=timezone.utc)
         entries.setdefault(base, []).append((child, mtime))
 
-    actions: List[_CleanAction] = []
-    skipped: List[_SkippedItem] = []
+    actions: list[_CleanAction] = []
+    skipped: list[_SkippedItem] = []
     now = datetime.now(timezone.utc)
 
-    overlay_groups: Dict[str, List[Tuple[str, List[Tuple[Path, datetime]], datetime]]] = defaultdict(list)
+    overlay_groups: dict[str, list[tuple[str, list[tuple[Path, datetime]], datetime]]] = (
+        defaultdict(list)
+    )
     for base, paths in entries.items():
         latest_time = max(mtime for _, mtime in paths)
         overlay_id = _overlay_id_from_base(base)
@@ -727,7 +733,7 @@ def _plan_conflict_actions(
 
     for overlay_id, items in overlay_groups.items():
         items_sorted = sorted(items, key=lambda item: item[2], reverse=True)
-        keep_base = items_sorted[0][0]
+        items_sorted[0][0]
         keep_time = items_sorted[0][2]
 
         if now - keep_time > age:
@@ -739,7 +745,7 @@ def _plan_conflict_actions(
                     )
                 )
 
-        for base, paths, latest_time in items_sorted[1:]:
+        for _base, paths, latest_time in items_sorted[1:]:
             if now - latest_time <= age:
                 for child_path, _ in paths:
                     skipped.append(
@@ -770,14 +776,14 @@ def _build_clean_plan(
     include_worktrees: bool,
     include_conflicts: bool,
     conflicts_age_days: int,
-) -> Tuple[List[_CleanAction], List[_SkippedItem]]:
+) -> tuple[list[_CleanAction], list[_SkippedItem]]:
     now = datetime.now(timezone.utc)
     worktrees = _collect_worktrees()
     build_times = _latest_build_times()
     current_branch = g.current_ref()
 
-    actions: List[_CleanAction] = []
-    skipped: List[_SkippedItem] = []
+    actions: list[_CleanAction] = []
+    skipped: list[_SkippedItem] = []
 
     overlay_actions, overlay_skipped = _plan_overlay_actions(
         cfg=cfg,
@@ -819,7 +825,7 @@ def _append_clean_log(entries: Iterable[str]) -> None:
 
 def _execute_clean_actions(actions: Sequence[_CleanAction]) -> None:
     repo = g.repo_root()
-    log_entries: List[str] = []
+    log_entries: list[str] = []
     for action in actions:
         if action.command:
             g.run(action.command)
@@ -839,13 +845,11 @@ def _print_clean_summary(
     actions: Sequence[_CleanAction], skipped_items: Sequence[_SkippedItem]
 ) -> None:
     categories = ["overlays", "worktrees", "conflicts"]
-    actions_by_cat: Dict[str, List[_CleanAction]] = {
-        cat: [action for action in actions if action.category == cat]
-        for cat in categories
+    actions_by_cat: dict[str, list[_CleanAction]] = {
+        cat: [action for action in actions if action.category == cat] for cat in categories
     }
-    skipped_by_cat: Dict[str, List[_SkippedItem]] = {
-        cat: [item for item in skipped_items if item.category == cat]
-        for cat in categories
+    skipped_by_cat: dict[str, list[_SkippedItem]] = {
+        cat: [item for item in skipped_items if item.category == cat] for cat in categories
     }
 
     if not any(actions_by_cat.values()) and not any(skipped_by_cat.values()):
@@ -861,23 +865,17 @@ def _print_clean_summary(
         typer.echo(f"  {cat.capitalize()}:")
         for action in cat_actions:
             if action.command:
-                typer.echo(
-                    f"    - {action.description} (git {' '.join(action.command)})"
-                )
+                typer.echo(f"    - {action.description} (git {' '.join(action.command)})")
             elif action.path:
-                typer.echo(
-                    f"    - {action.description}"
-                )
+                typer.echo(f"    - {action.description}")
             else:
                 typer.echo(f"    - {action.description}")
         for skip_item in cat_skips:
             typer.echo(f"    - {skip_item.description}")
 
 
-def _collect_status_summary(cfg: Config, latest: int) -> Dict[str, Any]:
-    upstream_ref = g.run(
-        ["rev-parse", f"{cfg.upstream.remote}/{cfg.upstream.branch}"], check=False
-    )
+def _collect_status_summary(cfg: Config, latest: int) -> dict[str, Any]:
+    upstream_ref = g.run(["rev-parse", f"{cfg.upstream.remote}/{cfg.upstream.branch}"], check=False)
     if upstream_ref.returncode != 0:
         typer.secho(
             f"[status] Warning: unable to resolve upstream {cfg.upstream.remote}/{cfg.upstream.branch}",
@@ -899,7 +897,7 @@ def _collect_status_summary(cfg: Config, latest: int) -> Dict[str, Any]:
     else:
         trunk_sha = trunk_ref.stdout.strip()
 
-    summary: Dict[str, Any] = {
+    summary: dict[str, Any] = {
         "status_version": 1,
         "upstream": {
             "remote": cfg.upstream.remote,
@@ -940,7 +938,7 @@ def _collect_status_summary(cfg: Config, latest: int) -> Dict[str, Any]:
         )
 
     guard_report = _load_guard_report()
-    guard_counts: Dict[str, int] = {}
+    guard_counts: dict[str, int] = {}
     if guard_report:
         overlay_name = guard_report.get("overlay")
         both = guard_report.get("both_touched")
@@ -960,14 +958,14 @@ def _collect_status_summary(cfg: Config, latest: int) -> Dict[str, Any]:
                 fg=typer.colors.YELLOW,
                 err=True,
             )
-            overlay_sha: Optional[str] = None
+            overlay_sha: str | None = None
         else:
             overlay_sha = rev.stdout.strip()
 
         log_entry = build_entries.get(name)
         selection = _selection_for_overlay(cfg, name, build_entries)
-        built_ts: Optional[datetime] = None
-        status_value: Optional[str] = None
+        built_ts: datetime | None = None
+        status_value: str | None = None
 
         if log_entry:
             built_ts, entry_payload = log_entry
@@ -976,7 +974,7 @@ def _collect_status_summary(cfg: Config, latest: int) -> Dict[str, Any]:
         if built_ts is None:
             built_ts = datetime.utcfromtimestamp(commit_ts).replace(tzinfo=timezone.utc)
 
-        overlay_payload: Dict[str, Any] = {
+        overlay_payload: dict[str, Any] = {
             "name": name,
             "sha": overlay_sha,
             "built_at": _format_timestamp_utc(built_ts),
@@ -989,6 +987,7 @@ def _collect_status_summary(cfg: Config, latest: int) -> Dict[str, Any]:
         summary["overlays"].append(overlay_payload)
 
     return summary
+
 
 def _ensure_gitignore(entry: str):
     repo = g.repo_root()
@@ -1086,44 +1085,58 @@ def status(
 
 @app.command()
 def clean(
-    overlays: Optional[List[str]] = typer.Option(
-        None,
-        "--overlays",
-        help="Age spec (e.g. 30d) or glob pattern; repeat to combine filters",
-        metavar="FILTER",
-    ),
-    keep: int = typer.Option(
-        0,
-        "--keep",
-        min=0,
-        help="Preserve N most-recent overlays regardless of filters",
-    ),
-    worktrees: bool = typer.Option(
-        False,
-        "--worktrees",
-        help="Include stale worktree pruning",
-    ),
-    conflicts: bool = typer.Option(
-        False,
-        "--conflicts",
-        help="Include conflict bundle cleanup",
-    ),
-    conflicts_age: int = typer.Option(
-        14,
-        "--conflicts-age",
-        min=1,
-        help="Age threshold in days for conflict bundles",
-    ),
-    dry_run: bool = typer.Option(
-        True,
-        "--dry-run/--no-dry-run",
-        help="Preview actions without executing (default)",
-    ),
-    confirm: bool = typer.Option(
-        False,
-        "--confirm",
-        help="Required to perform destructive actions",
-    ),
+    overlays: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--overlays",
+            help="Age spec (e.g. 30d) or glob pattern; repeat to combine filters",
+            metavar="FILTER",
+        ),
+    ] = None,
+    keep: Annotated[
+        int,
+        typer.Option(
+            "--keep",
+            min=0,
+            help="Preserve N most-recent overlays regardless of filters",
+        ),
+    ] = 0,
+    worktrees: Annotated[
+        bool,
+        typer.Option(
+            "--worktrees",
+            help="Include stale worktree pruning",
+        ),
+    ] = False,
+    conflicts: Annotated[
+        bool,
+        typer.Option(
+            "--conflicts",
+            help="Include conflict bundle cleanup",
+        ),
+    ] = False,
+    conflicts_age: Annotated[
+        int,
+        typer.Option(
+            "--conflicts-age",
+            min=1,
+            help="Age threshold in days for conflict bundles",
+        ),
+    ] = 14,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run/--no-dry-run",
+            help="Preview actions without executing (default)",
+        ),
+    ] = True,
+    confirm: Annotated[
+        bool,
+        typer.Option(
+            "--confirm",
+            help="Required to perform destructive actions",
+        ),
+    ] = False,
 ):
     overlay_filters = overlays or []
     if not overlay_filters and not worktrees and not conflicts:
@@ -1149,7 +1162,9 @@ def clean(
         return
 
     if dry_run:
-        typer.echo("[forked clean] Dry-run mode; no changes made. Re-run with --no-dry-run --confirm to apply.")
+        typer.echo(
+            "[forked clean] Dry-run mode; no changes made. Re-run with --no-dry-run --confirm to apply."
+        )
         return
 
     if not confirm:
@@ -1165,7 +1180,7 @@ def clean(
 
 @app.command()
 def sync(
-    emit_conflicts: Optional[str] = typer.Option(
+    emit_conflicts: str | None = typer.Option(
         None,
         "--emit-conflicts",
         help="Write conflict bundle JSON to PATH (default auto under .forked/conflicts)",
@@ -1173,7 +1188,7 @@ def sync(
         show_default=False,
         flag_value="__AUTO__",
     ),
-    conflict_blobs_dir: Optional[str] = typer.Option(
+    conflict_blobs_dir: str | None = typer.Option(
         None,
         "--conflict-blobs-dir",
         help="Directory for base/ours/theirs blob exports",
@@ -1188,7 +1203,7 @@ def sync(
         metavar="MODE",
         show_default=True,
     ),
-    on_conflict_exec: Optional[str] = typer.Option(
+    on_conflict_exec: str | None = typer.Option(
         None,
         "--on-conflict-exec",
         help="Shell command to run when --on-conflict exec (use {json} placeholder)",
@@ -1234,75 +1249,105 @@ def sync(
 
 @app.command()
 def build(
-    overlay: Optional[str] = typer.Option(
-        None, "--overlay", help="Overlay profile defined in forked.yml"
-    ),
-    features_arg: Optional[str] = typer.Option(
-        None,
-        "--features",
-        "-f",
-        help="Comma-separated list of features to include (mutually exclusive with --overlay)",
-    ),
-    include: List[str] = typer.Option(
-        None,
-        "--include",
-        help="Patch glob to force-include (can be provided multiple times)",
-        show_default=False,
-        metavar="PATTERN",
-    ),
-    exclude: List[str] = typer.Option(
-        None,
-        "--exclude",
-        help="Patch glob to exclude (can be provided multiple times)",
-        show_default=False,
-        metavar="PATTERN",
-    ),
-    id: Optional[str] = typer.Option(
-        None,
-        "--id",
-        help="Overlay identifier; defaults to profile name when using --overlay, otherwise today's date",
-    ),
-    no_worktree: bool = typer.Option(False, "--no-worktree"),
-    auto_continue: bool = typer.Option(False, "--auto-continue"),
-    skip_upstream_equivalents: bool = typer.Option(
-        False,
-        "--skip-upstream-equivalents",
-        help="Skip commits already present in trunk (uses git cherry)",
-    ),
-    git_note: bool = typer.Option(
-        True,
-        "--git-note/--no-git-note",
-        help="Write provenance note to refs/notes/forked-meta",
-    ),
-    emit_conflicts: Optional[str] = typer.Option(
-        None,
-        "--emit-conflicts",
-        help="Write conflict bundle JSON to PATH (default: .forked/conflicts/<id>-<wave>.json)",
-        metavar="[PATH]",
-        show_default=False,
-        flag_value="__AUTO__",
-    ),
-    conflict_blobs_dir: Optional[str] = typer.Option(
-        None,
-        "--conflict-blobs-dir",
-        help="Directory for base/ours/theirs blob exports (default auto when flag used)",
-        metavar="[DIR]",
-        show_default=False,
-        flag_value="__AUTO__",
-    ),
-    on_conflict: str = typer.Option(
-        "stop",
-        "--on-conflict",
-        help="Conflict handling mode: stop, bias, or exec",
-        metavar="MODE",
-        show_default=True,
-    ),
-    on_conflict_exec: Optional[str] = typer.Option(
-        None,
-        "--on-conflict-exec",
-        help="Shell command to run when --on-conflict exec (use {json} placeholder)",
-        metavar="COMMAND",
-    ),
+    overlay: Annotated[
+        str | None,
+        typer.Option(
+            "--overlay",
+            help="Overlay profile defined in forked.yml",
+        ),
+    ] = None,
+    features_arg: Annotated[
+        str | None,
+        typer.Option(
+            "--features",
+            "-f",
+            help="Comma-separated list of features to include (mutually exclusive with --overlay)",
+        ),
+    ] = None,
+    include: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--include",
+            help="Patch glob to force-include (can be provided multiple times)",
+            show_default=False,
+            metavar="PATTERN",
+        ),
+    ] = None,
+    exclude: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--exclude",
+            help="Patch glob to exclude (can be provided multiple times)",
+            show_default=False,
+            metavar="PATTERN",
+        ),
+    ] = None,
+    id: Annotated[
+        str | None,
+        typer.Option(
+            "--id",
+            help="Overlay identifier; defaults to profile name when using --overlay, otherwise today's date",
+        ),
+    ] = None,
+    no_worktree: Annotated[
+        bool,
+        typer.Option("--no-worktree"),
+    ] = False,
+    auto_continue: Annotated[
+        bool,
+        typer.Option("--auto-continue"),
+    ] = False,
+    skip_upstream_equivalents: Annotated[
+        bool,
+        typer.Option(
+            "--skip-upstream-equivalents",
+            help="Skip commits already present in trunk (uses git cherry)",
+        ),
+    ] = False,
+    git_note: Annotated[
+        bool,
+        typer.Option(
+            "--git-note/--no-git-note",
+            help="Write provenance note to refs/notes/forked-meta",
+        ),
+    ] = True,
+    emit_conflicts: Annotated[
+        str | None,
+        typer.Option(
+            "--emit-conflicts",
+            help="Write conflict bundle JSON to PATH (default: .forked/conflicts/<id>-<wave>.json)",
+            metavar="[PATH]",
+            show_default=False,
+            flag_value="__AUTO__",
+        ),
+    ] = None,
+    conflict_blobs_dir: Annotated[
+        str | None,
+        typer.Option(
+            "--conflict-blobs-dir",
+            help="Directory for base/ours/theirs blob exports (default auto when flag used)",
+            metavar="[DIR]",
+            show_default=False,
+            flag_value="__AUTO__",
+        ),
+    ] = None,
+    on_conflict: Annotated[
+        str,
+        typer.Option(
+            "--on-conflict",
+            help="Conflict handling mode: stop, bias, or exec",
+            metavar="MODE",
+            show_default=True,
+        ),
+    ] = "stop",
+    on_conflict_exec: Annotated[
+        str | None,
+        typer.Option(
+            "--on-conflict-exec",
+            help="Shell command to run when --on-conflict exec (use {json} placeholder)",
+            metavar="COMMAND",
+        ),
+    ] = None,
 ):
     cfg = load_config()
     feature_list = _parse_csv_option(features_arg)
@@ -1316,7 +1361,7 @@ def build(
         )
     except ResolutionError as exc:
         typer.secho(f"[build] {exc}", fg=typer.colors.RED)
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=2) from exc
 
     overlay_id = id or (overlay or date.today().isoformat())
 
@@ -1364,7 +1409,7 @@ def build(
     if selection.overlay_profile:
         rprint(f"[bold]Overlay profile:[/bold] {selection.overlay_profile}")
     if selection.include or selection.exclude:
-        filters: List[str] = []
+        filters: list[str] = []
         if selection.include:
             filters.append("include=" + ",".join(selection.include))
         if selection.exclude:
@@ -1387,15 +1432,26 @@ def build(
 
 @app.command()
 def guard(
-    overlay: str = typer.Option(..., "--overlay", help="Overlay branch/ref to inspect"),
-    output: Path = typer.Option(Path(".forked/report.json"), "--output"),
-    mode: str = typer.Option(None, "--mode"),
-    verbose: bool = typer.Option(
-        False,
-        "--verbose",
-        "-v",
-        help="Display sentinel matches and write additional debug details",
-    ),
+    overlay: Annotated[str, typer.Option("--overlay", help="Overlay branch/ref to inspect")],
+    output: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            help="Path to write the guard report",
+        ),
+    ] = Path(".forked/report.json"),
+    mode: Annotated[
+        str | None,
+        typer.Option("--mode"),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Display sentinel matches and write additional debug details",
+        ),
+    ] = False,
 ):
     cfg = load_config()
     if mode:
@@ -1412,18 +1468,18 @@ def guard(
     overlay_sha = overlay_rev.stdout.strip()
     base = g.merge_base(trunk, overlay)
 
-    report: Dict[str, Any] = {
+    report: dict[str, Any] = {
         "report_version": 2,
         "overlay": overlay,
         "trunk": trunk,
         "base": base,
         "violations": {},
     }
-    debug_info: Dict[str, Any] = {}
+    debug_info: dict[str, Any] = {}
 
     build_entries = _load_latest_build_entries()
     selection = _selection_for_overlay(cfg, overlay, build_entries)
-    features_block: Dict[str, Any] = {
+    features_block: dict[str, Any] = {
         "source": selection.get("source"),
         "values": selection.get("features", []),
     }
@@ -1465,7 +1521,7 @@ def guard(
 
     override_details = _resolve_override(cfg, overlay, overlay_sha)
     allowed_values_cfg = [value.lower() for value in cfg.policy_overrides.allowed_values or []]
-    override_block: Dict[str, Any] = {
+    override_block: dict[str, Any] = {
         "enabled": cfg.policy_overrides.require_trailer or cfg.guards.mode == "require-override",
         "source": override_details.get("source", "none"),
         "values": override_details.get("values", []),
@@ -1496,12 +1552,11 @@ def guard(
 
     override_required = override_block["enabled"] and bool(violation_scopes)
     override_present = bool(override_values)
-    override_error: Optional[str] = None
+    override_error: str | None = None
 
     if violation_scopes and override_present and invalid_values:
-        override_error = (
-            f"Override values {sorted(invalid_values)} are not permitted."
-            + (f" Allowed: {', '.join(sorted(allowed_set))}." if allowed_set else "")
+        override_error = f"Override values {sorted(invalid_values)} are not permitted." + (
+            f" Allowed: {', '.join(sorted(allowed_set))}." if allowed_set else ""
         )
     elif override_required and violation_scopes:
         if not override_present:
@@ -1510,9 +1565,8 @@ def guard(
             )
         elif not override_covers:
             missing = violation_scopes - set(override_values)
-            override_error = (
-                "Override does not cover all violation scopes; missing: "
-                + ", ".join(sorted(missing if missing else violation_scopes))
+            override_error = "Override does not cover all violation scopes; missing: " + ", ".join(
+                sorted(missing if missing else violation_scopes)
             )
 
     override_applied = (
@@ -1597,11 +1651,13 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 @feature_app.command("create")
 def feature_create(
     name: str = typer.Argument(..., help="Feature name (kebab-case recommended)"),
     slices: int = typer.Option(1, "--slices", min=1, help="Number of patch slices to scaffold"),
-    slug: Optional[str] = typer.Option(
+    slug: str | None = typer.Option(
         None,
         "--slug",
         help="Optional suffix for slice branches (e.g. 'initial'); defaults to numeric only",
@@ -1611,11 +1667,13 @@ def feature_create(
     g.ensure_clean()
 
     if name in cfg.features:
-        typer.secho(f"[feature] Feature '{name}' already exists in forked.yml.", fg=typer.colors.RED)
+        typer.secho(
+            f"[feature] Feature '{name}' already exists in forked.yml.", fg=typer.colors.RED
+        )
         raise typer.Exit(code=2)
 
     slug_fragment = slug.replace(" ", "-") if slug else ""
-    new_patches: List[str] = []
+    new_patches: list[str] = []
 
     # Ensure trunk exists before creating branches.
     trunk_cp = g.run(["rev-parse", cfg.branches.trunk], check=False)
