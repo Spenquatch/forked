@@ -6,7 +6,6 @@ from typer.testing import CliRunner
 from forked.cli import app
 from forked.config import Feature, OverlayProfile, load_config, write_config, write_skeleton
 
-
 runner = CliRunner(mix_stderr=False)
 
 
@@ -20,7 +19,12 @@ def _prepare_guard_repo(git_repo, monkeypatch, *, allowed_values=None):
     cfg.overlays = {"dev": OverlayProfile(features=["contract_update"])}
     cfg.guards.sentinels.must_match_upstream = ["api/contracts/**"]
     cfg.policy_overrides.require_trailer = True
-    cfg.policy_overrides.allowed_values = allowed_values or ["sentinel", "size", "both_touched", "all"]
+    cfg.policy_overrides.allowed_values = allowed_values or [
+        "sentinel",
+        "size",
+        "both_touched",
+        "all",
+    ]
     write_config(cfg)
     git_repo.git("add", "forked.yml")
     git_repo.git("commit", "-m", "configure forked")
@@ -54,7 +58,9 @@ def test_require_override_without_marker_fails(git_repo, monkeypatch):
 def test_commit_override_allows_violation(git_repo, monkeypatch):
     _prepare_guard_repo(git_repo, monkeypatch)
 
-    initial = runner.invoke(app, ["guard", "--overlay", "overlay/dev", "--mode", "require-override"])
+    initial = runner.invoke(
+        app, ["guard", "--overlay", "overlay/dev", "--mode", "require-override"]
+    )
     assert initial.exit_code == 2
 
     git_repo.git("checkout", "overlay/dev")
@@ -97,7 +103,9 @@ def test_disallowed_override_scope_fails(git_repo, monkeypatch):
 def test_tag_override_used_when_commit_missing(git_repo, monkeypatch):
     _prepare_guard_repo(git_repo, monkeypatch)
 
-    failure = runner.invoke(app, ["guard", "--overlay", "overlay/dev", "--mode", "require-override"])
+    failure = runner.invoke(
+        app, ["guard", "--overlay", "overlay/dev", "--mode", "require-override"]
+    )
     assert failure.exit_code == 2
 
     git_repo.git("tag", "-a", "override-tag", "overlay/dev", "-m", "Forked-Override: sentinel")

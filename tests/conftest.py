@@ -1,7 +1,6 @@
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import pytest
 
@@ -40,7 +39,9 @@ def git_repo(tmp_path: Path) -> GitRepo:
 
     remote_path = tmp_path / "remote.git"
     subprocess.run(["git", "init", "--bare", str(remote_path)], check=True)
-    subprocess.run(["git", "remote", "add", "upstream", str(remote_path)], cwd=repo_path, check=True)
+    subprocess.run(
+        ["git", "remote", "add", "upstream", str(remote_path)], cwd=repo_path, check=True
+    )
     subprocess.run(["git", "push", "upstream", "trunk"], cwd=repo_path, check=True)
 
     return GitRepo(repo_path)

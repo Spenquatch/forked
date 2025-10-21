@@ -6,7 +6,6 @@ from typer.testing import CliRunner
 from forked.cli import app
 from forked.config import Feature, load_config, write_config, write_skeleton
 
-
 runner = CliRunner(mix_stderr=False)
 
 
@@ -88,9 +87,7 @@ def test_status_json_derives_selection_without_provenance(git_repo, monkeypatch)
     log_path = repo_root / ".forked" / "logs" / "forked-build.log"
     if log_path.exists():
         log_path.unlink()
-    git_repo.git(
-        "notes", "--ref", "refs/notes/forked-meta", "remove", "overlay/dev", check=False
-    )
+    git_repo.git("notes", "--ref", "refs/notes/forked-meta", "remove", "overlay/dev", check=False)
 
     derived = runner.invoke(app, ["status", "--json"])
     assert derived.exit_code == 0, derived.stdout

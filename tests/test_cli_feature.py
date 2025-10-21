@@ -6,7 +6,6 @@ from typer.testing import CliRunner
 from forked.cli import app
 from forked.config import write_skeleton
 
-
 runner = CliRunner()
 
 

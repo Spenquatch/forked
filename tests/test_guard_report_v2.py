@@ -6,7 +6,6 @@ from typer.testing import CliRunner
 from forked.cli import app
 from forked.config import Feature, OverlayProfile, load_config, write_config, write_skeleton
 
-
 runner = CliRunner(mix_stderr=False)
 
 

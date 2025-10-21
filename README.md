@@ -599,10 +599,22 @@ The script provisions:
 # install dependencies and editable CLI
 python -m pip install -e .
 
+# install development tooling (linting + type checking)
+python -m pip install -e ".[dev]"
+
+# run Ruff (lint + format)
+ruff check .
+ruff format .
+
+# run mypy (type checking configuration lives in pyproject.toml)
+mypy --config-file pyproject.toml
+
 # run project handbook automation (e.g., sprint dashboards)
 cd project-handbook
 make help
 ```
+
+> **Note:** The initial mypy run surfaces outstanding type gaps across the CLI modules. The configuration is in place so we can ratchet coverage over time; fix the reported issues (or add targeted ignores) before treating the check as a gate in CI.
 
 Key handbook commands:
 

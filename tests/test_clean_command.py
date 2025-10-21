@@ -7,7 +7,6 @@ from typer.testing import CliRunner
 from forked.cli import app
 from forked.config import load_config, write_config, write_skeleton
 
-
 runner = CliRunner(mix_stderr=False)
 
 
@@ -96,9 +95,7 @@ def test_clean_worktrees_prunes_stale_dir(git_repo, monkeypatch, tmp_path):
     stale_dir = Path(".forked/worktrees/stale")
     stale_dir.mkdir(parents=True, exist_ok=True)
 
-    result = runner.invoke(
-        app, ["clean", "--worktrees", "--no-dry-run", "--confirm"]
-    )
+    result = runner.invoke(app, ["clean", "--worktrees", "--no-dry-run", "--confirm"])
     assert result.exit_code == 0, result.stdout
     assert not stale_dir.exists()
 
@@ -118,9 +115,7 @@ def test_clean_conflict_pruning(git_repo, monkeypatch):
     os.utime(old_json, (old_time, old_time))
     os.utime(old_dir, (old_time, old_time))
 
-    result = runner.invoke(
-        app, ["clean", "--conflicts", "--no-dry-run", "--confirm"]
-    )
+    result = runner.invoke(app, ["clean", "--conflicts", "--no-dry-run", "--confirm"])
     assert result.exit_code == 0, result.stdout
     assert not old_json.exists()
     assert not old_dir.exists()
