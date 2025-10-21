@@ -1,9 +1,13 @@
 """Forked CLI Typer entrypoint."""
 
-from datetime import date, datetime, timezone
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta, timezone
+from fnmatch import fnmatch
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+import shutil
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 import typer
 from rich import print as rprint
 from .config import Config, Feature, load_config, write_config, write_skeleton
@@ -360,6 +364,516 @@ def _violation_scopes(violations: Dict[str, Any]) -> Set[str]:
     return scopes
 
 
+@dataclass
+class _CleanAction:
+    category: str
+    description: str
+    command: Optional[List[str]] = None
+    path: Optional[Path] = None
+
+
+@dataclass
+class _SkippedItem:
+    category: str
+    description: str
+
+
+@dataclass
+class _WorktreeInfo:
+    path: Path
+    branch: Optional[str]
+
+
+@dataclass
+class _OverlayInfo:
+    name: str
+    commit: str
+    commit_time: datetime
+    build_time: Optional[datetime]
+    tags: List[str]
+    has_worktree: bool
+    is_current: bool
+
+    @property
+    def reference_time(self) -> datetime:
+        return self.build_time or self.commit_time
+
+    def age(self, now: datetime) -> timedelta:
+        return now - self.reference_time
+
+
+def _latest_build_times() -> Dict[str, datetime]:
+    entries = _load_latest_build_entries()
+    times: Dict[str, datetime] = {}
+    for overlay_name, (timestamp, _) in entries.items():
+        if timestamp:
+            times[overlay_name] = timestamp
+    return times
+
+
+def _collect_worktrees() -> List[_WorktreeInfo]:
+    cp = g.run(["worktree", "list", "--porcelain"])
+    infos: List[_WorktreeInfo] = []
+    current: Dict[str, str] = {}
+    for line in cp.stdout.splitlines():
+        if line.startswith("worktree "):
+            if current:
+                infos.append(
+                    _WorktreeInfo(
+                        path=Path(current["worktree"]),
+                        branch=current.get("branch"),
+                    )
+                )
+                current = {}
+            current["worktree"] = line.split(" ", 1)[1]
+        elif line.startswith("branch "):
+            current["branch"] = line.split(" ", 1)[1]
+        elif not line and current:
+            infos.append(
+                _WorktreeInfo(
+                    path=Path(current["worktree"]),
+                    branch=current.get("branch"),
+                )
+            )
+            current = {}
+    if current:
+        infos.append(
+            _WorktreeInfo(
+                path=Path(current["worktree"]),
+                branch=current.get("branch"),
+            )
+        )
+    return infos
+
+
+def _short_branch(ref: Optional[str]) -> Optional[str]:
+    if ref and ref.startswith("refs/heads/"):
+        return ref[len("refs/heads/") :]
+    return ref
+
+
+def _list_overlay_infos(
+    cfg: Config,
+    worktrees: Sequence[_WorktreeInfo],
+    build_times: Dict[str, datetime],
+    current_branch: str,
+) -> List[_OverlayInfo]:
+    repo = g.repo_root()
+    overlays_ref = g.run(
+        [
+            "for-each-ref",
+            "--format=%(refname:short)|%(committerdate:unix)|%(objectname)",
+            "refs/heads/overlay/",
+        ],
+        check=False,
+    )
+    if overlays_ref.returncode != 0:
+        return []
+
+    worktree_branch_set = {
+        _short_branch(info.branch) for info in worktrees if info.branch
+    }
+
+    infos: List[_OverlayInfo] = []
+    for line in overlays_ref.stdout.splitlines():
+        if not line or "|" not in line:
+            continue
+        name_part, ts_part, sha = line.split("|", 2)
+        if not name_part:
+            continue
+        try:
+            commit_ts = datetime.fromtimestamp(int(ts_part), tz=timezone.utc)
+        except ValueError:
+            commit_ts = datetime.now(timezone.utc)
+        tags_cp = g.run(["tag", "--points-at", name_part], check=False)
+        tags = [tag for tag in tags_cp.stdout.splitlines() if tag] if tags_cp.returncode == 0 else []
+        infos.append(
+            _OverlayInfo(
+                name=name_part,
+                commit=sha,
+                commit_time=commit_ts,
+                build_time=build_times.get(name_part),
+                tags=tags,
+                has_worktree=name_part in worktree_branch_set,
+                is_current=(current_branch == name_part),
+            )
+        )
+    return infos
+
+
+def _parse_age_spec(spec: str) -> Optional[timedelta]:
+    raw = spec.strip().lower()
+    if raw.endswith("d") and raw[:-1].isdigit():
+        return timedelta(days=int(raw[:-1]))
+    if raw.endswith("h") and raw[:-1].isdigit():
+        return timedelta(hours=int(raw[:-1]))
+    return None
+
+
+def _compute_keep_set(infos: Sequence[_OverlayInfo], keep: int) -> set[str]:
+    if keep <= 0:
+        return set()
+    ordered = sorted(infos, key=lambda info: info.reference_time, reverse=True)
+    return {info.name for info in ordered[:keep]}
+
+
+def _plan_overlay_actions(
+    cfg: Config,
+    overlays_filters: Sequence[str],
+    keep: int,
+    now: datetime,
+    worktrees: Sequence[_WorktreeInfo],
+    build_times: Dict[str, datetime],
+    current_branch: str,
+) -> Tuple[List[_CleanAction], List[_SkippedItem]]:
+    if not overlays_filters:
+        return [], []
+
+    age_threshold: Optional[timedelta] = None
+    patterns: List[str] = []
+    for raw in overlays_filters:
+        raw = raw.strip()
+        if not raw:
+            continue
+        age = _parse_age_spec(raw)
+        if age:
+            age_threshold = age
+        else:
+            patterns.append(raw)
+
+    if age_threshold is None and not patterns:
+        typer.secho(
+            "[clean] No overlay filter provided. Use an age spec (e.g. 30d) or glob pattern.",
+            fg=typer.colors.YELLOW,
+        )
+        return [], []
+
+    infos = _list_overlay_infos(cfg, worktrees, build_times, current_branch)
+    if not infos:
+        return [], []
+
+    candidates = infos
+    if age_threshold is not None:
+        cutoff = now - age_threshold
+        candidates = [info for info in candidates if info.reference_time <= cutoff]
+
+    if patterns:
+        candidates = [
+            info
+            for info in candidates
+            if any(fnmatch(info.name, pattern) for pattern in patterns)
+        ]
+
+    keep_set = _compute_keep_set(infos, keep)
+    default_overlay = next(iter(cfg.overlays.keys()), None)
+    default_overlay_branch: Optional[str] = None
+    if default_overlay:
+        default_overlay_branch = f"{cfg.branches.overlay_prefix}{default_overlay}"
+
+    actions: List[_CleanAction] = []
+    skipped: List[_SkippedItem] = []
+
+    for info in candidates:
+        if info.name in keep_set:
+            skipped.append(
+                _SkippedItem(
+                    category="overlays",
+                    description=f"skip {info.name} (within keep window)",
+                )
+            )
+            continue
+        if default_overlay_branch and info.name == default_overlay_branch:
+            skipped.append(
+                _SkippedItem(
+                    category="overlays",
+                    description=f"skip {info.name} (default overlay)",
+                )
+            )
+            continue
+        if info.tags:
+            skipped.append(
+                _SkippedItem(
+                    category="overlays",
+                    description=f"skip {info.name} (tagged: {', '.join(info.tags)})",
+                )
+            )
+            continue
+        if info.has_worktree:
+            skipped.append(
+                _SkippedItem(
+                    category="overlays",
+                    description=f"skip {info.name} (active worktree present)",
+                )
+            )
+            continue
+        if info.is_current:
+            skipped.append(
+                _SkippedItem(
+                    category="overlays",
+                    description=f"skip {info.name} (currently checked out)",
+                )
+            )
+            continue
+
+        age_days = int(info.age(now).total_seconds() // 86400)
+        desc = f"delete {info.name} (age {age_days}d)"
+        actions.append(
+            _CleanAction(
+                category="overlays",
+                description=desc,
+                command=["branch", "-D", info.name],
+            )
+        )
+
+    if not actions and age_threshold is not None and not patterns:
+        skipped.append(
+            _SkippedItem(
+                category="overlays",
+                description="no overlays matched the age threshold",
+            )
+        )
+
+    return actions, skipped
+
+
+def _plan_worktree_actions(
+    worktrees: Sequence[_WorktreeInfo],
+) -> Tuple[List[_CleanAction], List[_SkippedItem]]:
+    repo = g.repo_root()
+    worktrees_dir = repo / ".forked" / "worktrees"
+    actions: List[_CleanAction] = []
+    skipped: List[_SkippedItem] = []
+
+    actions.append(
+        _CleanAction(
+            category="worktrees",
+            description="git worktree prune",
+            command=["worktree", "prune"],
+        )
+    )
+
+    active_paths = {info.path.resolve() for info in worktrees}
+    if worktrees_dir.exists():
+        for child in worktrees_dir.iterdir():
+            if not child.is_dir():
+                continue
+            if child.resolve() in active_paths:
+                skipped.append(
+                    _SkippedItem(
+                        category="worktrees",
+                        description=f"skip {child.relative_to(repo)} (active)",
+                    )
+                )
+                continue
+            actions.append(
+                _CleanAction(
+                    category="worktrees",
+                    description=f"remove {child.relative_to(repo)}",
+                    path=child,
+                )
+            )
+    else:
+        skipped.append(
+            _SkippedItem(
+                category="worktrees",
+                description="no .forked/worktrees directory present",
+            )
+        )
+
+    return actions, skipped
+
+
+def _overlay_id_from_base(base: str) -> str:
+    head, sep, tail = base.rpartition("-")
+    if sep and tail.isdigit():
+        return head
+    return base
+
+
+def _plan_conflict_actions(
+    age: timedelta,
+) -> Tuple[List[_CleanAction], List[_SkippedItem]]:
+    repo = g.repo_root()
+    conflicts_dir = repo / ".forked" / "conflicts"
+    if not conflicts_dir.exists():
+        return [], [
+            _SkippedItem(
+                category="conflicts",
+                description="no conflict bundles found",
+            )
+        ]
+
+    entries: Dict[str, List[Tuple[Path, datetime]]] = {}
+    for child in conflicts_dir.iterdir():
+        base = None
+        if child.is_file() and child.suffix == ".json":
+            base = child.stem
+        elif child.is_dir():
+            base = child.name
+        if base is None:
+            continue
+        mtime = datetime.fromtimestamp(child.stat().st_mtime, tz=timezone.utc)
+        entries.setdefault(base, []).append((child, mtime))
+
+    actions: List[_CleanAction] = []
+    skipped: List[_SkippedItem] = []
+    now = datetime.now(timezone.utc)
+
+    overlay_groups: Dict[str, List[Tuple[str, List[Tuple[Path, datetime]], datetime]]] = defaultdict(list)
+    for base, paths in entries.items():
+        latest_time = max(mtime for _, mtime in paths)
+        overlay_id = _overlay_id_from_base(base)
+        overlay_groups[overlay_id].append((base, paths, latest_time))
+
+    for overlay_id, items in overlay_groups.items():
+        items_sorted = sorted(items, key=lambda item: item[2], reverse=True)
+        keep_base = items_sorted[0][0]
+        keep_time = items_sorted[0][2]
+
+        if now - keep_time > age:
+            for child_path, _ in items_sorted[0][1]:
+                skipped.append(
+                    _SkippedItem(
+                        category="conflicts",
+                        description=f"retained {child_path.relative_to(repo)} (latest bundle for {overlay_id})",
+                    )
+                )
+
+        for base, paths, latest_time in items_sorted[1:]:
+            if now - latest_time <= age:
+                for child_path, _ in paths:
+                    skipped.append(
+                        _SkippedItem(
+                            category="conflicts",
+                            description=f"retained {child_path.relative_to(repo)} (newer than threshold)",
+                        )
+                    )
+                continue
+            for child_path, _ in paths:
+                rel = child_path.relative_to(repo)
+                actions.append(
+                    _CleanAction(
+                        category="conflicts",
+                        description=f"remove {rel}",
+                        path=child_path,
+                    )
+                )
+
+    return actions, skipped
+
+
+def _build_clean_plan(
+    cfg: Config,
+    *,
+    overlays_filters: Sequence[str],
+    keep: int,
+    include_worktrees: bool,
+    include_conflicts: bool,
+    conflicts_age_days: int,
+) -> Tuple[List[_CleanAction], List[_SkippedItem]]:
+    now = datetime.now(timezone.utc)
+    worktrees = _collect_worktrees()
+    build_times = _latest_build_times()
+    current_branch = g.current_ref()
+
+    actions: List[_CleanAction] = []
+    skipped: List[_SkippedItem] = []
+
+    overlay_actions, overlay_skipped = _plan_overlay_actions(
+        cfg=cfg,
+        overlays_filters=overlays_filters,
+        keep=keep,
+        now=now,
+        worktrees=worktrees,
+        build_times=build_times,
+        current_branch=current_branch,
+    )
+    actions.extend(overlay_actions)
+    skipped.extend(overlay_skipped)
+
+    if include_worktrees:
+        worktree_actions, worktree_skips = _plan_worktree_actions(worktrees)
+        actions.extend(worktree_actions)
+        skipped.extend(worktree_skips)
+
+    if include_conflicts:
+        conflicts_actions, conflicts_skips = _plan_conflict_actions(
+            timedelta(days=conflicts_age_days)
+        )
+        actions.extend(conflicts_actions)
+        skipped.extend(conflicts_skips)
+
+    return actions, skipped
+
+
+def _append_clean_log(entries: Iterable[str]) -> None:
+    repo = g.repo_root()
+    logs_dir = repo / ".forked" / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    log_path = logs_dir / "clean.log"
+    timestamp = datetime.now(timezone.utc).isoformat()
+    with log_path.open("a", encoding="utf-8") as fh:
+        for entry in entries:
+            fh.write(f"{timestamp} {entry}\n")
+
+
+def _execute_clean_actions(actions: Sequence[_CleanAction]) -> None:
+    repo = g.repo_root()
+    log_entries: List[str] = []
+    for action in actions:
+        if action.command:
+            g.run(action.command)
+            log_entries.append(f"{action.category}: git {' '.join(action.command)}")
+        elif action.path:
+            if action.path.is_dir():
+                shutil.rmtree(action.path, ignore_errors=True)
+            elif action.path.exists():
+                action.path.unlink(missing_ok=True)
+            rel = action.path.relative_to(repo)
+            log_entries.append(f"{action.category}: remove {rel}")
+    if log_entries:
+        _append_clean_log(log_entries)
+
+
+def _print_clean_summary(
+    actions: Sequence[_CleanAction], skipped: Sequence[_SkippedItem]
+) -> None:
+    categories = ["overlays", "worktrees", "conflicts"]
+    actions_by_cat: Dict[str, List[_CleanAction]] = {
+        cat: [action for action in actions if action.category == cat]
+        for cat in categories
+    }
+    skipped_by_cat: Dict[str, List[_SkippedItem]] = {
+        cat: [item for item in skipped if item.category == cat]
+        for cat in categories
+    }
+
+    if not any(actions_by_cat.values()) and not any(skipped_by_cat.values()):
+        typer.echo("[forked clean] Nothing matched the provided selectors.")
+        return
+
+    typer.echo("[forked clean] Plan summary:")
+    for cat in categories:
+        cat_actions = actions_by_cat.get(cat, [])
+        cat_skips = skipped_by_cat.get(cat, [])
+        if not cat_actions and not cat_skips:
+            continue
+        typer.echo(f"  {cat.capitalize()}:")
+        for action in cat_actions:
+            if action.command:
+                typer.echo(
+                    f"    - {action.description} (git {' '.join(action.command)})"
+                )
+            elif action.path:
+                typer.echo(
+                    f"    - {action.description}"
+                )
+            else:
+                typer.echo(f"    - {action.description}")
+        for skipped in cat_skips:
+            typer.echo(f"    - {skipped.description}")
+
+
 def _collect_status_summary(cfg: Config, latest: int) -> Dict[str, Any]:
     upstream_ref = g.run(
         ["rev-parse", f"{cfg.upstream.remote}/{cfg.upstream.branch}"], check=False
@@ -568,6 +1082,85 @@ def status(
             base = g.merge_base(cfg.branches.trunk, name)
             bt = both_touched(cfg, base, cfg.branches.trunk, name)
             rprint(f"  {name}  [{built_at}]  both-touched={len(bt)}")
+
+
+@app.command()
+def clean(
+    overlays: Optional[List[str]] = typer.Option(
+        None,
+        "--overlays",
+        help="Age spec (e.g. 30d) or glob pattern; repeat to combine filters",
+        metavar="FILTER",
+    ),
+    keep: int = typer.Option(
+        0,
+        "--keep",
+        min=0,
+        help="Preserve N most-recent overlays regardless of filters",
+    ),
+    worktrees: bool = typer.Option(
+        False,
+        "--worktrees",
+        help="Include stale worktree pruning",
+    ),
+    conflicts: bool = typer.Option(
+        False,
+        "--conflicts",
+        help="Include conflict bundle cleanup",
+    ),
+    conflicts_age: int = typer.Option(
+        14,
+        "--conflicts-age",
+        min=1,
+        help="Age threshold in days for conflict bundles",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--no-dry-run",
+        help="Preview actions without executing (default)",
+    ),
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Required to perform destructive actions",
+    ),
+):
+    overlay_filters = overlays or []
+    if not overlay_filters and not worktrees and not conflicts:
+        typer.secho(
+            "[clean] Specify at least one target via --overlays, --worktrees, or --conflicts.",
+            fg=typer.colors.YELLOW,
+        )
+        return
+
+    cfg = load_config()
+    actions, skipped = _build_clean_plan(
+        cfg,
+        overlays_filters=overlay_filters,
+        keep=keep,
+        include_worktrees=worktrees,
+        include_conflicts=conflicts,
+        conflicts_age_days=conflicts_age,
+    )
+    _print_clean_summary(actions, skipped)
+
+    if not actions:
+        typer.echo("[forked clean] No actions scheduled.")
+        return
+
+    if dry_run:
+        typer.echo("[forked clean] Dry-run mode; no changes made. Re-run with --no-dry-run --confirm to apply.")
+        return
+
+    if not confirm:
+        typer.secho(
+            "[forked clean] Refusing to execute without --confirm.",
+            fg=typer.colors.RED,
+        )
+        return
+
+    _execute_clean_actions(actions)
+    typer.echo("[forked clean] Cleanup complete.")
 
 
 @app.command()

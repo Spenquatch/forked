@@ -21,7 +21,7 @@ Outcomes
 - Conflict bundles and worktrees are tidied on a predictable cadence.
 
 State
-- Stage: planned
+- Stage: maintained
 - Owner: @ai-agent
 
 Key Links

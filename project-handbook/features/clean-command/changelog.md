@@ -8,8 +8,8 @@ tags: [changelog]
 
 # Changelog
 
-## Planned
-- Introduce `forked clean` with dry-run default and `--confirm` execution gating.
-- Support pruning overlay branches by age/pattern with `--keep N` retention.
-- Provide worktree pruning (`--worktrees`) and conflict bundle cleanup (`--conflicts`).
-- Document usage patterns and safety rails in README.
+## 2025-10-21
+- Delivered `forked clean` with dry-run default, explicit `--no-dry-run --confirm` execution gate, and audit logging to `.forked/logs/clean.log`.
+- Added overlay pruning filters (age/pattern), retention window via `--keep N`, and protections for tagged/current worktrees.
+- Implemented worktree pruning (`--worktrees`) and conflict bundle cleanup (`--conflicts`, `--conflicts-age`) retaining the newest bundles per overlay.
+- Documented usage patterns and safety rails in README, handbook sanity checklist, and testing guides.

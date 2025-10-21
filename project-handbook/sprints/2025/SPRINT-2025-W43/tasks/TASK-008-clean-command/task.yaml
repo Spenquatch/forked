@@ -3,7 +3,7 @@ title: Clean Command Implementation
 feature: clean-command
 decision: ADR-0005
 owner: @ai-agent
-status: todo
+status: done
 story_points: 3
 depends_on: [TASK-003]
 prio: P0

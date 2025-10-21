@@ -387,6 +387,32 @@ forked status --json --latest 1 | jq '.patches[] | {name, ahead, behind}'
 
 When no overlays exist, the command returns an empty array and prints an informational message; consumers should treat `both_touched_count: null` as “guard data not yet collected”.
 
+### `forked clean`
+
+```bash
+forked clean [--overlays FILTER] [--keep N] [--worktrees] [--conflicts]
+             [--conflicts-age DAYS] [--dry-run/--no-dry-run] [--confirm]
+```
+
+- Dry-run is the default: the command prints a grouped summary (overlays, worktrees, conflicts) with the exact Git/File operations that would occur. No changes are made until you pass both `--no-dry-run` **and** `--confirm`.
+- `--overlays FILTER` – target overlay branches by age (`30d`) or glob (`overlay/tmp-*`). Repeat the flag to combine filters. Use `--keep N` to preserve the N newest overlays regardless of filters. Tagged overlays, active worktrees, and the current branch are always skipped.
+- `--worktrees` – prune stale worktrees via `git worktree prune` and remove leftover directories under `.forked/worktrees/*` that no longer map to live overlays.
+- `--conflicts` – delete conflict bundles under `.forked/conflicts` older than the retention window (default 14 days). The newest bundle per overlay id is retained; override the threshold with `--conflicts-age`.
+- Every destructive run appends an entry to `.forked/logs/clean.log` so operators have an audit trail.
+
+Examples:
+
+```bash
+# Preview overlays older than 30 days, keeping the 2 most recent
+forked clean --dry-run --overlays 30d --keep 2
+
+# Remove temporary overlays once reviewed
+forked clean --overlays 'overlay/tmp-*' --no-dry-run --confirm
+
+# Clear stale worktrees and conflict bundles in a single sweep
+forked clean --worktrees --conflicts --no-dry-run --confirm
+```
+
 ### `forked feature create`
 
 ```bash

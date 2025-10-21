@@ -161,7 +161,15 @@
     This exercises the resolver’s feature list + include override path, and it
     should still populate provenance for the combined selection.
 
-13. **Create and inspect new feature slices**
+13. **Run clean, dry-run mode**
+
+    ```bash
+    forked clean --dry-run --overlays 'overlay/tmp-*' --worktrees --conflicts
+    ```
+
+    Confirm the summary lists candidate overlays/worktrees/conflicts and ends with a reminder that no changes were made.
+
+14. **Create and inspect new feature slices**
 
     ```bash
     git add forked.yml .gitignore && git commit -m "chore: configure forked"
@@ -172,7 +180,7 @@
     The new feature appears with `patch/checkout/01` and `/02` marked as
     “merged” until they diverge from `trunk`.
 
-14. **Cleanup (optional)**
+15. **Cleanup (optional)**
 
     ```bash
     git worktree prune
