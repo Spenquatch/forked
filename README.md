@@ -309,10 +309,46 @@ Exit codes:
 ### `forked status`
 
 ```bash
-forked status [--latest N]
+forked status [--latest N] [--json]
 ```
 
-Shows upstream and trunk SHAs, lists patches in order, and prints the newest overlays with timestamps and both-touched counts.
+- Default output mirrors previous behaviour: upstream/trunk SHAs, patch branches in configured order, and the newest overlays with their build timestamps and both-touched counts. The overlay window defaults to the latest **5** entries; adjust with `--latest N`.
+- `--json` emits a machine-readable payload (`status_version: 1`) suitable for dashboards or guard automation. Provenance is sourced from `.forked/logs/forked-build.log` / `refs/notes/forked-meta`, with automatic fallbacks when those entries are missing.
+
+Example:
+
+```json
+{
+  "status_version": 1,
+  "upstream": {"remote": "upstream", "branch": "main", "sha": "c0ffee..."},
+  "trunk": {"name": "trunk", "sha": "b4d00d..."},
+  "patches": [
+    {"name": "patch/payments/01", "sha": "1234abcd...", "ahead": 2, "behind": 0}
+  ],
+  "overlays": [
+    {
+      "name": "overlay/dev",
+      "sha": "feedf00d...",
+      "built_at": "2025-10-20T18:45:02Z",
+      "selection": {
+        "source": "provenance-log",
+        "features": ["payments"],
+        "patches": ["patch/payments/01"]
+      },
+      "both_touched_count": 1
+    }
+  ]
+}
+```
+
+Common `jq` flows:
+
+```bash
+forked status --json | jq '.overlays[].selection.features'
+forked status --json --latest 1 | jq '.patches[] | {name, ahead, behind}'
+```
+
+When no overlays exist, the command returns an empty array and prints an informational message; consumers should treat `both_touched_count: null` as “guard data not yet collected”.
 
 ### `forked feature create`
 

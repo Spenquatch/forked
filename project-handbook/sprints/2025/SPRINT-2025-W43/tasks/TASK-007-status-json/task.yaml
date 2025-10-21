@@ -3,7 +3,7 @@ title: Status JSON CLI
 feature: status-json
 decision: ADR-0005
 owner: @ai-agent
-status: todo
+status: review
 story_points: 2
 depends_on: [TASK-003]
 prio: P0

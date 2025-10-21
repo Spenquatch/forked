@@ -102,28 +102,53 @@
    jq '.violations.sentinels.must_match_upstream' .forked/report.json
    ```
 
-8. **Test include/exclude filters**
+8. **Status command regression + JSON contract**
 
    ```bash
-   # Reapply forked.yml if trunk was reset, then:
-   forked build --overlay dev --exclude patch/service-logging --id dev-minus
+   forked status --latest 2
+   forked status --json --latest 3 | jq '.status_version, .patches, [.overlays[].selection.source]'
    ```
 
-   The build should only cherry-pick `patch/contract-update` and note the
-   exclusion in the selection filters.
+   Confirm the human-friendly table still renders, and the JSON output reports
+   `status_version: 1`, ahead/behind counts, and overlay selections sourced from
+   provenance (`"selection.source": "provenance-log"`).
 
-9. **Ad-hoc feature selection**
+9. **JSON fallback behaviour**
 
    ```bash
-   forked build --features service_logging \
-       --include patch/contract-update \
-       --id combo \
-       --skip-upstream-equivalents
+   mv .forked/logs/forked-build.log .forked/logs/forked-build.log.bak
+   git notes --ref=refs/notes/forked-meta remove overlay/dev
+   forked status --json --latest 3 | jq 'map(select(.name==\"overlay/dev\"))[0].selection'
+   mv .forked/logs/forked-build.log.bak .forked/logs/forked-build.log
+   forked build --overlay dev --skip-upstream-equivalents  # restore provenance
    ```
 
-   This exercises the resolver’s feature list + include override path.
+   You should see the CLI warn about missing provenance and return
+   `"selection.source": "derived"` with resolver metadata. Re-run the build to
+   put the log/note back for subsequent steps.
 
-10. **Create and inspect new feature slices**
+10. **Test include/exclude filters**
+
+    ```bash
+    forked build --overlay dev --exclude patch/service-logging --id dev-minus
+    ```
+
+    The build should only cherry-pick `patch/contract-update` and note the
+    exclusion in the selection filters.
+
+11. **Ad-hoc feature selection**
+
+    ```bash
+    forked build --features service_logging \
+        --include patch/contract-update \
+        --id combo \
+        --skip-upstream-equivalents
+    ```
+
+    This exercises the resolver’s feature list + include override path, and it
+    should still populate provenance for the combined selection.
+
+12. **Create and inspect new feature slices**
 
     ```bash
     git add forked.yml .gitignore && git commit -m "chore: configure forked"
@@ -134,7 +159,7 @@
     The new feature appears with `patch/checkout/01` and `/02` marked as
     “merged” until they diverge from `trunk`.
 
-11. **Cleanup (optional)**
+13. **Cleanup (optional)**
 
     ```bash
     git worktree prune

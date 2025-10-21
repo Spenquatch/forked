@@ -1,6 +1,6 @@
 """Forked CLI Typer entrypoint."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -60,6 +60,296 @@ def _overlays_by_date(prefix: str) -> List[Tuple[str, int]]:
     return sorted(items, key=lambda item: item[1], reverse=True)
 
 
+def _parse_iso_timestamp(raw: str) -> Optional[datetime]:
+    if not raw:
+        return None
+    value = raw.strip()
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _format_timestamp_utc(ts: Optional[datetime]) -> Optional[str]:
+    if ts is None:
+        return None
+    return ts.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _load_latest_build_entries() -> Dict[str, Tuple[Optional[datetime], Dict[str, Any]]]:
+    repo = g.repo_root()
+    log_path = repo / ".forked" / "logs" / "forked-build.log"
+    if not log_path.exists():
+        return {}
+    latest: Dict[str, Tuple[Optional[datetime], Dict[str, Any]]] = {}
+    for raw_line in log_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            typer.secho(
+                "[status] Warning: unable to parse build log entry; skipping.",
+                fg=typer.colors.YELLOW,
+                err=True,
+            )
+            continue
+        overlay_name = entry.get("overlay")
+        if not overlay_name:
+            continue
+        ts = _parse_iso_timestamp(entry.get("timestamp", ""))
+        existing = latest.get(overlay_name)
+        if existing is None:
+            latest[overlay_name] = (ts, entry)
+            continue
+        prev_ts, _ = existing
+        if prev_ts is None and ts is not None:
+            latest[overlay_name] = (ts, entry)
+        elif ts is not None and prev_ts is not None and ts > prev_ts:
+            latest[overlay_name] = (ts, entry)
+        elif ts is None and prev_ts is None:
+            latest[overlay_name] = (ts, entry)
+    return latest
+
+
+def _read_overlay_note(overlay: str) -> Optional[Dict[str, Any]]:
+    cp = g.run(["notes", "--ref", "refs/notes/forked-meta", "show", overlay], check=False)
+    if cp.returncode != 0 or not cp.stdout.strip():
+        return None
+    features: List[str] = []
+    patches: List[str] = []
+    overlay_profile: Optional[str] = None
+    skip_equivalents = False
+    for raw_line in cp.stdout.splitlines():
+        line = raw_line.strip()
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip().lower()
+        value = value.strip()
+        if key == "features":
+            features = [chunk.strip() for chunk in value.split(",") if chunk.strip()]
+        elif key == "patches":
+            patches = [chunk.strip() for chunk in value.split(",") if chunk.strip()]
+        elif key == "overlay_profile":
+            overlay_profile = value or None
+        elif key == "skip_upstream_equivalents":
+            skip_equivalents = value.lower() in {"1", "true", "yes"}
+    return {
+        "source": "git-note",
+        "features": features,
+        "patches": patches,
+        "overlay_profile": overlay_profile,
+        "skip_upstream_equivalents": skip_equivalents,
+    }
+
+
+def _load_guard_report() -> Optional[Dict[str, Any]]:
+    repo = g.repo_root()
+    path = repo / ".forked" / "report.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        typer.secho(
+            "[status] Warning: unable to parse .forked/report.json; ignoring guard metrics.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        return None
+
+
+def _selection_from_log(entry: Dict[str, Any]) -> Dict[str, Any]:
+    raw = entry.get("selection") or {}
+    selection: Dict[str, Any] = {
+        "source": "provenance-log",
+        "features": raw.get("features", []),
+        "patches": raw.get("patches", []),
+    }
+    if "overlay_profile" in raw:
+        selection["overlay_profile"] = raw.get("overlay_profile")
+    if "include" in raw:
+        selection["include"] = raw.get("include")
+    if "exclude" in raw:
+        selection["exclude"] = raw.get("exclude")
+    if "unmatched_include" in raw:
+        selection["unmatched_include"] = raw.get("unmatched_include")
+    if "unmatched_exclude" in raw:
+        selection["unmatched_exclude"] = raw.get("unmatched_exclude")
+    if "patch_feature_map" in raw:
+        selection["patch_feature_map"] = raw.get("patch_feature_map")
+    if "skip_upstream_equivalents" in raw:
+        selection["skip_upstream_equivalents"] = raw.get("skip_upstream_equivalents")
+    resolver_source = raw.get("source")
+    if resolver_source:
+        selection["resolver_source"] = resolver_source
+    return selection
+
+
+def _derived_selection(cfg: Config, overlay_branch: str) -> Dict[str, Any]:
+    prefix = cfg.branches.overlay_prefix
+    overlay_id = overlay_branch[len(prefix) :] if overlay_branch.startswith(prefix) else overlay_branch
+    typer.secho(
+        f"[status] Provenance missing for {overlay_branch}; deriving selection from configuration.",
+        fg=typer.colors.YELLOW,
+        err=True,
+    )
+    try:
+        if overlay_id in cfg.overlays:
+            resolved = resolve_selection(cfg, overlay=overlay_id)
+        else:
+            resolved = resolve_selection(cfg)
+    except ResolutionError as exc:
+        typer.secho(
+            f"[status] Warning: resolver fallback failed for {overlay_branch}: {exc}",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        return {"source": "derived", "features": [], "patches": []}
+
+    return {
+        "source": "derived",
+        "resolver_source": resolved.source,
+        "overlay_profile": resolved.overlay_profile,
+        "features": resolved.active_features,
+        "patches": resolved.patches,
+        "include": resolved.include,
+        "exclude": resolved.exclude,
+        "skip_upstream_equivalents": False,
+    }
+
+
+def _collect_status_summary(cfg: Config, latest: int) -> Dict[str, Any]:
+    upstream_ref = g.run(
+        ["rev-parse", f"{cfg.upstream.remote}/{cfg.upstream.branch}"], check=False
+    )
+    if upstream_ref.returncode != 0:
+        typer.secho(
+            f"[status] Warning: unable to resolve upstream {cfg.upstream.remote}/{cfg.upstream.branch}",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        upstream_sha = None
+    else:
+        upstream_sha = upstream_ref.stdout.strip()
+
+    trunk_ref = g.run(["rev-parse", cfg.branches.trunk], check=False)
+    if trunk_ref.returncode != 0:
+        typer.secho(
+            f"[status] Warning: unable to resolve trunk branch '{cfg.branches.trunk}'",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        trunk_sha = None
+    else:
+        trunk_sha = trunk_ref.stdout.strip()
+
+    summary: Dict[str, Any] = {
+        "status_version": 1,
+        "upstream": {
+            "remote": cfg.upstream.remote,
+            "branch": cfg.upstream.branch,
+            "sha": upstream_sha,
+        },
+        "trunk": {"name": cfg.branches.trunk, "sha": trunk_sha},
+        "patches": [],
+        "overlays": [],
+    }
+
+    for branch in cfg.patches.order:
+        rev = g.run(["rev-parse", branch], check=False)
+        if rev.returncode != 0:
+            typer.secho(
+                f"[status] Warning: patch branch '{branch}' not found.",
+                fg=typer.colors.YELLOW,
+                err=True,
+            )
+            branch_sha = None
+            ahead = None
+            behind = None
+        else:
+            branch_sha = rev.stdout.strip()
+            ahead_behind = _ahead_behind(cfg.branches.trunk, branch)
+            if ahead_behind is None:
+                typer.secho(
+                    f"[status] Unable to compute ahead/behind for '{branch}'.",
+                    fg=typer.colors.YELLOW,
+                    err=True,
+                )
+                behind = None
+                ahead = None
+            else:
+                behind, ahead = ahead_behind
+        summary["patches"].append(
+            {"name": branch, "sha": branch_sha, "ahead": ahead, "behind": behind}
+        )
+
+    guard_report = _load_guard_report()
+    guard_counts: Dict[str, int] = {}
+    if guard_report:
+        overlay_name = guard_report.get("overlay")
+        both = guard_report.get("both_touched")
+        if isinstance(overlay_name, str) and isinstance(both, list):
+            guard_counts[overlay_name] = len(both)
+
+    build_entries = _load_latest_build_entries()
+    overlays = _overlays_by_date(cfg.branches.overlay_prefix)
+    if not overlays:
+        typer.secho("[status] No overlay branches found.", fg=typer.colors.BLUE, err=True)
+
+    for name, commit_ts in overlays[:latest]:
+        rev = g.run(["rev-parse", name], check=False)
+        if rev.returncode != 0:
+            typer.secho(
+                f"[status] Warning: overlay branch '{name}' not found.",
+                fg=typer.colors.YELLOW,
+                err=True,
+            )
+            overlay_sha: Optional[str] = None
+        else:
+            overlay_sha = rev.stdout.strip()
+
+        log_entry = build_entries.get(name)
+        selection: Dict[str, Any]
+        built_ts: Optional[datetime] = None
+        status_value: Optional[str] = None
+
+        if log_entry:
+            built_ts, entry_payload = log_entry
+            selection = _selection_from_log(entry_payload)
+            status_value = entry_payload.get("status")
+        else:
+            selection = {}
+
+        if not selection:
+            note_selection = _read_overlay_note(name)
+            if note_selection:
+                selection = note_selection
+
+        if not selection:
+            selection = _derived_selection(cfg, name)
+
+        if built_ts is None:
+            built_ts = datetime.utcfromtimestamp(commit_ts).replace(tzinfo=timezone.utc)
+
+        overlay_payload: Dict[str, Any] = {
+            "name": name,
+            "sha": overlay_sha,
+            "built_at": _format_timestamp_utc(built_ts),
+            "selection": selection,
+            "both_touched_count": guard_counts.get(name),
+        }
+        if status_value:
+            overlay_payload["build_status"] = status_value
+
+        summary["overlays"].append(overlay_payload)
+
+    return summary
+
 def _ensure_gitignore(entry: str):
     repo = g.repo_root()
     gitignore_path = repo / ".gitignore"
@@ -109,24 +399,49 @@ def init(upstream_remote: str = "upstream", upstream_branch: str = "main"):
 
 
 @app.command()
-def status(latest: int = typer.Option(1, "--latest", min=1, help="Show N newest overlays")):
+def status(
+    latest: int = typer.Option(5, "--latest", min=1, help="Show N newest overlays"),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit machine-readable status JSON",
+        is_flag=True,
+    ),
+):
     cfg = load_config()
-    upstream_ref = g.run(["rev-parse", f"{cfg.upstream.remote}/{cfg.upstream.branch}"]).stdout.strip()
-    trunk_ref = g.run(["rev-parse", cfg.branches.trunk]).stdout.strip()
-    rprint(f"[bold]Upstream[/bold]: {cfg.upstream.remote}/{cfg.upstream.branch} @ {upstream_ref[:12]}")
-    rprint(f"[bold]Trunk[/bold]:    {cfg.branches.trunk} @ {trunk_ref[:12]}")
+    summary = _collect_status_summary(cfg, latest)
+
+    if json_output:
+        typer.echo(json.dumps(summary, indent=2))
+        return
+
+    upstream = summary["upstream"]
+    trunk = summary["trunk"]
+    upstream_sha = upstream.get("sha") or ""
+    trunk_sha = trunk.get("sha") or ""
+    rprint(
+        f"[bold]Upstream[/bold]: {upstream['remote']}/{upstream['branch']} @ {upstream_sha[:12]}"
+    )
+    rprint(f"[bold]Trunk[/bold]:    {trunk['name']} @ {trunk_sha[:12]}")
+
     rprint("[bold]Patches:[/bold]")
-    for branch in cfg.patches.order:
-        sha = g.run(["rev-parse", branch]).stdout.strip()
-        rprint(f"  {branch} @ {sha[:12]}")
-    overlays = _overlays_by_date(cfg.branches.overlay_prefix)
+    for patch in summary["patches"]:
+        sha = patch.get("sha") or ""
+        rprint(f"  {patch['name']} @ {sha[:12]}")
+
+    overlays = summary["overlays"]
     if overlays:
         rprint("[bold]Overlays (newest first):[/bold]")
-        for name, ts in overlays[:latest]:
+        for entry in overlays:
+            name = entry["name"]
+            sha = entry.get("sha")
+            built_at = entry.get("built_at") or "unknown"
+            if sha is None:
+                rprint(f"  {name}  [{built_at}]  missing")
+                continue
             base = g.merge_base(cfg.branches.trunk, name)
             bt = both_touched(cfg, base, cfg.branches.trunk, name)
-            when = datetime.fromtimestamp(ts).isoformat(sep=" ", timespec="seconds")
-            rprint(f"  {name}  [{when}]  both-touched={len(bt)}")
+            rprint(f"  {name}  [{built_at}]  both-touched={len(bt)}")
 
 
 @app.command()
