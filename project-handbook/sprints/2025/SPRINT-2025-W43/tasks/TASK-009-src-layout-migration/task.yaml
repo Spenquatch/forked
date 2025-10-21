@@ -3,7 +3,7 @@ title: Adopt src Layout
 feature: release-operations
 decision: ADR-0005
 owner: @ai-agent
-status: todo
+status: review
 story_points: 2
 depends_on: [TASK-005]
 prio: P1

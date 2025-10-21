@@ -21,7 +21,7 @@ pytest tests/test_config_features.py tests/test_cli_feature.py -q
 ## Manual Workflow Samples
 ```bash
 # build overlay by profile
-forked build --overlay dev --emit-conflicts .forked/conflicts/dev.json
+forked build --overlay dev --emit-conflicts-path .forked/conflicts/dev.json
 
 # build overlay for ad-hoc feature list with include/exclude
 forked build --features payments_v2,branding --exclude 'patch/branding/*'

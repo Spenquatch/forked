@@ -1044,7 +1044,6 @@ def status(
         False,
         "--json",
         help="Emit machine-readable status JSON",
-        is_flag=True,
     ),
 ):
     cfg = load_config()
@@ -1180,21 +1179,29 @@ def clean(
 
 @app.command()
 def sync(
-    emit_conflicts: str | None = typer.Option(
-        None,
+    emit_conflicts: bool = typer.Option(
+        False,
         "--emit-conflicts",
-        help="Write conflict bundle JSON to PATH (default auto under .forked/conflicts)",
-        metavar="[PATH]",
+        help="Write conflict bundle JSON to the default sync location (.forked/conflicts/<branch>-<wave>.json)",
+    ),
+    emit_conflicts_path: str | None = typer.Option(
+        None,
+        "--emit-conflicts-path",
+        help="Write conflict bundle JSON to PATH",
+        metavar="PATH",
         show_default=False,
-        flag_value="__AUTO__",
+    ),
+    emit_conflict_blobs: bool = typer.Option(
+        False,
+        "--emit-conflict-blobs",
+        help="Export base/ours/theirs blobs to the default directory alongside the bundle",
     ),
     conflict_blobs_dir: str | None = typer.Option(
         None,
         "--conflict-blobs-dir",
         help="Directory for base/ours/theirs blob exports",
-        metavar="[DIR]",
+        metavar="DIR",
         show_default=False,
-        flag_value="__AUTO__",
     ),
     on_conflict: str = typer.Option(
         "stop",
@@ -1216,6 +1223,30 @@ def sync(
     ),
 ):
     cfg = load_config()
+    emit_conflicts_value: str | None
+    if emit_conflicts_path:
+        emit_conflicts_value = emit_conflicts_path
+    elif emit_conflicts:
+        emit_conflicts_value = "__AUTO__"
+    else:
+        emit_conflicts_value = None
+
+    conflict_blobs_dir_value: str | None
+    if conflict_blobs_dir:
+        conflict_blobs_dir_value = conflict_blobs_dir
+    elif emit_conflict_blobs:
+        conflict_blobs_dir_value = "__AUTO__"
+    else:
+        conflict_blobs_dir_value = None
+
+    if conflict_blobs_dir_value and emit_conflicts_value is None:
+        typer.secho(
+            "[sync] --emit-conflict-blobs/--conflict-blobs-dir requires --emit-conflicts.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
     conflict_mode = on_conflict.lower()
     if conflict_mode in {"bias-continue", "bias_continue"}:
         conflict_mode = "bias"
@@ -1226,8 +1257,8 @@ def sync(
 
     telemetry = run_sync(
         cfg,
-        emit_conflicts=emit_conflicts,
-        conflict_blobs_dir=conflict_blobs_dir,
+        emit_conflicts=emit_conflicts_value,
+        conflict_blobs_dir=conflict_blobs_dir_value,
         on_conflict=conflict_mode,
         on_conflict_exec=on_conflict_exec,
         auto_continue=auto_continue,
@@ -1312,23 +1343,35 @@ def build(
         ),
     ] = True,
     emit_conflicts: Annotated[
-        str | None,
+        bool,
         typer.Option(
             "--emit-conflicts",
-            help="Write conflict bundle JSON to PATH (default: .forked/conflicts/<id>-<wave>.json)",
-            metavar="[PATH]",
+            help="Write conflict bundle JSON to the default location (.forked/conflicts/<id>-<wave>.json)",
+        ),
+    ] = False,
+    emit_conflicts_path: Annotated[
+        str | None,
+        typer.Option(
+            "--emit-conflicts-path",
+            help="Write conflict bundle JSON to PATH",
+            metavar="PATH",
             show_default=False,
-            flag_value="__AUTO__",
         ),
     ] = None,
+    emit_conflict_blobs: Annotated[
+        bool,
+        typer.Option(
+            "--emit-conflict-blobs",
+            help="Export base/ours/theirs blobs to the default directory alongside the bundle",
+        ),
+    ] = False,
     conflict_blobs_dir: Annotated[
         str | None,
         typer.Option(
             "--conflict-blobs-dir",
-            help="Directory for base/ours/theirs blob exports (default auto when flag used)",
-            metavar="[DIR]",
+            help="Directory for base/ours/theirs blob exports",
+            metavar="DIR",
             show_default=False,
-            flag_value="__AUTO__",
         ),
     ] = None,
     on_conflict: Annotated[
@@ -1365,6 +1408,30 @@ def build(
 
     overlay_id = id or (overlay or date.today().isoformat())
 
+    emit_conflicts_value: str | None
+    if emit_conflicts_path:
+        emit_conflicts_value = emit_conflicts_path
+    elif emit_conflicts:
+        emit_conflicts_value = "__AUTO__"
+    else:
+        emit_conflicts_value = None
+
+    conflict_blobs_dir_value: str | None
+    if conflict_blobs_dir:
+        conflict_blobs_dir_value = conflict_blobs_dir
+    elif emit_conflict_blobs:
+        conflict_blobs_dir_value = "__AUTO__"
+    else:
+        conflict_blobs_dir_value = None
+
+    if conflict_blobs_dir_value and emit_conflicts_value is None:
+        typer.secho(
+            "[build] --emit-conflict-blobs/--conflict-blobs-dir requires --emit-conflicts.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
     conflict_mode = on_conflict.lower()
     if conflict_mode in {"bias-continue", "bias_continue"}:
         conflict_mode = "bias"
@@ -1400,8 +1467,8 @@ def build(
         auto_continue=auto_continue,
         skip_upstream_equivalents=skip_upstream_equivalents,
         write_git_note=git_note,
-        emit_conflicts=emit_conflicts,
-        conflict_blobs_dir=conflict_blobs_dir,
+        emit_conflicts=emit_conflicts_value,
+        conflict_blobs_dir=conflict_blobs_dir_value,
         on_conflict=conflict_mode,
         on_conflict_exec=on_conflict_exec,
     )

@@ -240,7 +240,8 @@ Fetches upstream, resets `trunk` to `upstream/<branch>`, then iterates through e
 ```bash
 forked build [--overlay PROFILE | --features NAME[,NAME...]] [--include PATTERN]...
              [--exclude PATTERN]... [--id ID] [--skip-upstream-equivalents]
-             [--emit-conflicts [PATH]] [--conflict-blobs-dir [DIR]]
+             [--emit-conflicts] [--emit-conflicts-path PATH]
+             [--emit-conflict-blobs] [--conflict-blobs-dir DIR]
              [--on-conflict MODE] [--on-conflict-exec COMMAND]
              [--no-worktree] [--auto-continue] [--git-note/--no-git-note]
 ```
@@ -251,8 +252,10 @@ forked build [--overlay PROFILE | --features NAME[,NAME...]] [--include PATTERN]
 - `--skip-upstream-equivalents` – skip cherry-picking commits already present on trunk (based on `git cherry -v`) and log the skipped counts per patch.
 - `--id` – overlay identifier (default: overlay profile name or current date `YYYY-MM-DD`).
 - `--no-worktree` – build directly in the current working tree instead of creating/reusing a worktree.
-- `--emit-conflicts [PATH]` – write a conflict bundle (`schema_version: 2`) when a cherry-pick halts. Defaults to `.forked/conflicts/<id>-<wave>.json` when no path is provided.
-- `--conflict-blobs-dir [DIR]` – export base/ours/theirs blobs for each conflicted path (always used for binary/large files). Defaults to `.forked/conflicts/<id>/wave-<n>/` when the flag is present without a directory.
+- `--emit-conflicts` – write a conflict bundle (`schema_version: 2`) when a cherry-pick halts, storing it at the default path `.forked/conflicts/<id>-<wave>.json`.
+- `--emit-conflicts-path PATH` – write the conflict bundle to a custom location instead of the default path.
+- `--emit-conflict-blobs` – export base/ours/theirs blobs for each conflicted path alongside the bundle (binary/large files always trigger blob export).
+- `--conflict-blobs-dir DIR` – store exported blobs under a custom directory when `--emit-conflict-blobs` is used.
 - `--on-conflict MODE` – conflict policy: `stop` (default, exit code 10), `bias` (apply recommended ours/theirs resolutions and continue), or `exec` (run an external command).
 - `--on-conflict-exec COMMAND` – shell command invoked when `--on-conflict exec` is selected (use `{json}` as a placeholder for the bundle path).
 - `--auto-continue` – legacy alias for `--on-conflict bias`.
@@ -268,13 +271,16 @@ Behaviour highlights:
 ### `forked sync`
 
 ```bash
-forked sync [--emit-conflicts [PATH]] [--conflict-blobs-dir [DIR]]
+forked sync [--emit-conflicts] [--emit-conflicts-path PATH]
+            [--emit-conflict-blobs] [--conflict-blobs-dir DIR]
             [--on-conflict MODE] [--on-conflict-exec COMMAND]
             [--auto-continue]
 ```
 
-- `--emit-conflicts [PATH]` – emit a rebase conflict bundle when a patch fails to rebase. Defaults to `.forked/conflicts/sync-<branch>-<wave>.json` when omitted.
-- `--conflict-blobs-dir [DIR]` – export base/ours/theirs blobs for each conflicted file (automatically enabled for binary/large entries when the flag is present).
+- `--emit-conflicts` – emit a rebase conflict bundle when a patch fails to rebase, storing it at the default path `.forked/conflicts/sync-<branch>-<wave>.json`.
+- `--emit-conflicts-path PATH` – place the sync conflict bundle at a custom location.
+- `--emit-conflict-blobs` – export base/ours/theirs blobs for each conflicted file alongside the bundle.
+- `--conflict-blobs-dir DIR` – store exported blobs under a custom directory when `--emit-conflict-blobs` is used.
 - `--on-conflict MODE` – `stop` (default, exit code `10`), `bias` (apply recommended resolutions and continue the rebase), or `exec` (delegate to an external command).
 - `--on-conflict-exec COMMAND` – command executed when `--on-conflict exec` is selected; `{json}` is replaced with the bundle path.
 - `--auto-continue` – alias for `--on-conflict bias`.
@@ -490,7 +496,7 @@ Downstream tooling (CI, bots) can parse `violations` and `override` to fail buil
 
 ## Conflict Bundles
 
-When `--emit-conflicts` is supplied, `forked build` and `forked sync` record conflict bundles (`schema_version: 2`) under `.forked/conflicts/<id>-<wave>.json`:
+When conflict bundling is enabled (`--emit-conflicts` or `--emit-conflicts-path`), `forked build` and `forked sync` record conflict bundles (`schema_version: 2`) under `.forked/conflicts/<id>-<wave>.json`:
 
 ```json
 {
@@ -561,7 +567,7 @@ Capture bundles in CI and highlight a deterministic failure when exit code `10` 
   run: |
     set -e
     forked build --overlay dev \
-      --emit-conflicts .forked/conflicts/ci \
+      --emit-conflicts-path .forked/conflicts/ci \
       --on-conflict stop || status=$?
     if [ "${status:-0}" = "10" ]; then
       bundle=$(ls .forked/conflicts/ci-*.json)
@@ -599,6 +605,8 @@ The script provisions:
 # install runtime + dev dependencies inside a Poetry virtualenv
 poetry install --with dev
 
+# runtime package lives under src/forked/ to mirror installed layout
+
 # lint & format with Ruff
 poetry run ruff check .
 poetry run ruff format --check .
@@ -606,7 +614,7 @@ poetry run ruff format --check .
 poetry run ruff format .
 
 # run mypy (currently scoped to the CLI entrypoint)
-poetry run mypy --config-file pyproject.toml forked/cli.py
+poetry run mypy --config-file pyproject.toml src/forked/cli.py
 
 # run project handbook automation (e.g., sprint dashboards)
 poetry run make -C project-handbook help

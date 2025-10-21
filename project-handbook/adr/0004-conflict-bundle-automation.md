@@ -15,7 +15,7 @@ links: [../features/conflict-bundle-automation/overview.md]
 
 ## Decision
 - Introduce a shared conflict collector that, on cherry-pick/rebase halt, records blob OIDs, unified diffs, sentinel/path-bias recommendations, and resume commands in a JSON “conflict bundle” (schema versioned).
-- Add `--emit-conflicts`, `--conflict-blobs-dir`, `--on-conflict <mode>`, and `--on-conflict-exec` flags to `forked build` and `forked sync`.
+- Add `--emit-conflicts`/`--emit-conflicts-path`, `--emit-conflict-blobs`/`--conflict-blobs-dir`, `--on-conflict <mode>`, and `--on-conflict-exec` flags to `forked build` and `forked sync`.
 - Emit exit code `10` when conflicts are captured (unless a custom exec hook overrides it) so CI can branch logic cleanly.
 - Optionally export base/ours/theirs blobs per conflicted path for downstream tools.
 - Document the schema, usage patterns, and CI integration in README + release notes.

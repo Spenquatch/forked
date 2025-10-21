@@ -26,7 +26,7 @@ links: []
 ## Step 4: Tooling & Docs
 - [ ] Verify `poetry run ruff check .` and `poetry run mypy ...` still succeed after the move.
 - [ ] Update README/development docs to mention the `src/` layout and any command changes.
-- [ ] Update sanity checklist if necessary (e.g., references to `forked/cli.py`).
+- [ ] Update sanity checklist if necessary (e.g., references to `src/forked/cli.py`).
 
 ## Step 5: Follow-up Checks
 - [ ] Run existing tests (`poetry run pytest`).

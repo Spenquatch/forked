@@ -57,7 +57,7 @@ def test_sync_conflict_auto_continue(git_repo, monkeypatch):
         app,
         [
             "sync",
-            "--emit-conflicts",
+            "--emit-conflicts-path",
             ".forked/conflicts/sync",
             "--on-conflict",
             "bias",

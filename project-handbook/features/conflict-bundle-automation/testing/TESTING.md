@@ -12,7 +12,7 @@ tags: [testing, automation]
 1. Create divergence between `trunk` and `patch/example/01-slice`.
 2. Run:
    ```bash
-   forked build --features example --emit-conflicts .forked/conflicts/example-1.json --conflict-blobs-dir .forked/conflicts/example/blobs --on-conflict stop
+   forked build --features example --emit-conflicts-path .forked/conflicts/example-1.json --emit-conflict-blobs --conflict-blobs-dir .forked/conflicts/example/blobs --on-conflict stop
    echo $?
    ```
 3. Confirm exit code `10`.
@@ -26,12 +26,12 @@ tags: [testing, automation]
 1. Introduce upstream change that conflicts with `patch/example/02-slice`.
 2. Run:
    ```bash
-   forked sync --emit-conflicts .forked/conflicts/sync-1.json --on-conflict stop
+   forked sync --emit-conflicts-path .forked/conflicts/sync-1.json --on-conflict stop
    ```
 3. Ensure rebase halts with exit `10` and JSON references the offending patch commit.
 4. Re-run with auto-continue:
    ```bash
-   forked sync --emit-conflicts .forked/conflicts/sync-continue.json --auto-continue --on-conflict bias
+   forked sync --emit-conflicts-path .forked/conflicts/sync-continue.json --auto-continue --on-conflict bias
    ```
    Confirm bias actions logged and additional wave bundle created if a second conflict occurs.
 5. Follow `resume.continue` to verify the instructions succeed post-resolution.
@@ -39,7 +39,7 @@ tags: [testing, automation]
 ## Exec Hook
 1. Provide a simple script:
    ```bash
-   forked build --features example --emit-conflicts .forked/conflicts/auto.json \
+   forked build --features example --emit-conflicts-path .forked/conflicts/auto.json \
      --on-conflict exec './scripts/auto-resolve.sh'
    ```
 2. Ensure CLI propagates script exit status and logs the handoff.

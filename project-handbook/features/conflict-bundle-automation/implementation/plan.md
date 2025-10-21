@@ -20,7 +20,7 @@ tags: [implementation, plan]
    - [ ] Emit bundles under `.forked/conflicts/<overlay-id>-<wave>.json`; append entries to `.forked/logs/forked-build.log` with wave info.
    - [ ] Add POSIX shell metadata and note for Windows guidance.
 2. **Build Integration**
-   - [ ] Wire CLI options (`--emit-conflicts`, `--conflict-blobs-dir`, `--on-conflict`, `--on-conflict-exec`).
+   - [ ] Wire CLI options (`--emit-conflicts`/`--emit-conflicts-path`, `--emit-conflict-blobs`/`--conflict-blobs-dir`, `--on-conflict`, `--on-conflict-exec`).
    - [ ] Hook collector into cherry-pick failure path; log bundle location and wave number.
    - [ ] Exit code `10` on conflict bundles; propagate child status for `--on-conflict exec`.
 3. **Sync Integration**

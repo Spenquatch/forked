@@ -16,7 +16,7 @@ dependencies = [
 forked = "forked.cli:app"
 
 [tool.poetry]
-packages = [{ include = "forked" }]
+packages = [{ include = "forked", from = "src" }]
 
 [tool.poetry.group.dev.dependencies]
 ruff = ">=0.5"
@@ -47,7 +47,7 @@ skip-magic-trailing-comma = false
 
 [tool.mypy]
 python_version = "3.10"
-files = ["forked/cli.py"]
+files = ["src/forked"]
 strict = false
 ignore_missing_imports = true
 follow_imports = "skip"

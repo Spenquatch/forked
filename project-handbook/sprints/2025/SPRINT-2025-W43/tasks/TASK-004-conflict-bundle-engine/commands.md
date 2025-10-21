@@ -22,7 +22,8 @@ git commit -am "feature change"
 
 # run build with conflict bundle
 forked build --features example \
-  --emit-conflicts .forked/conflicts/example-1.json \
+  --emit-conflicts-path .forked/conflicts/example-1.json \
+  --emit-conflict-blobs \
   --conflict-blobs-dir .forked/conflicts/example/blobs \
   --on-conflict stop || echo "expected conflict"
 ```
@@ -36,15 +37,15 @@ ls .forked/conflicts/example/blobs/
 ## Sync Conflict Test
 ```bash
 # default stop-on-conflict
-forked sync --emit-conflicts .forked/conflicts/sync-1.json --on-conflict stop || echo $?
+forked sync --emit-conflicts-path .forked/conflicts/sync-1.json --on-conflict stop || echo $?
 
 # auto-continue bias path
-forked sync --emit-conflicts .forked/conflicts/sync-continue.json --auto-continue --on-conflict bias || echo $?
+forked sync --emit-conflicts-path .forked/conflicts/sync-continue.json --auto-continue --on-conflict bias || echo $?
 ```
 
 ## Exec Hook Example
 ```bash
-forked build --emit-conflicts .forked/conflicts/auto.json \
+forked build --emit-conflicts-path .forked/conflicts/auto.json \
   --on-conflict exec "./scripts/auto-resolve-conflict.sh"
 ```
 

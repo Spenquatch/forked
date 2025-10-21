@@ -1,8 +1,14 @@
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+
+ROOT = Path(__file__).resolve().parent.parent
+SRC_DIR = ROOT / "src"
+if SRC_DIR.exists():
+    sys.path.insert(0, str(SRC_DIR))
 
 
 @dataclass

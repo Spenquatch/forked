@@ -19,7 +19,7 @@ mv forked src/
 ```bash
 poetry check
 poetry run ruff check .
-poetry run mypy --config-file pyproject.toml forked/cli.py
+poetry run mypy --config-file pyproject.toml src/forked/cli.py
 ```
 
 ## Tests & Sanity Workflow

@@ -16,7 +16,7 @@ links: []
 - [ ] Unit test precedence logic, schema v2 structure (wave, shell note), and blob export.
 
 ## Step 2: Build Integration
-- [ ] Extend `forked build` parser with conflict flags (`--emit-conflicts`, `--conflict-blobs-dir`, `--on-conflict`, `--on-conflict-exec`).
+- [ ] Extend `forked build` parser with conflict flags (`--emit-conflicts`/`--emit-conflicts-path`, `--emit-conflict-blobs`/`--conflict-blobs-dir`, `--on-conflict`, `--on-conflict-exec`).
 - [ ] Hook collector into cherry-pick failure path; ensure cleanup/abort messaging.
 - [ ] Generate wave-numbered bundle filenames when multiple conflict cycles occur; append entries to `.forked/logs/forked-build.log`.
 - [ ] Exit code `10` when bundle generated; respect exec return code overrides.

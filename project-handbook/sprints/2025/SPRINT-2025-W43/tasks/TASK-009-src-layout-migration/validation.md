@@ -12,7 +12,7 @@ links: []
 ## Automated
 - [ ] `poetry run ruff check .`
 - [ ] `poetry run ruff format --check .`
-- [ ] `poetry run mypy --config-file pyproject.toml forked/cli.py`
+- [ ] `poetry run mypy --config-file pyproject.toml src/forked/cli.py`
 - [ ] `poetry run pytest`
 
 ## Manual

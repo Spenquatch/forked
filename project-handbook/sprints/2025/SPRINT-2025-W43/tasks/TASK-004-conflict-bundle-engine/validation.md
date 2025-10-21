@@ -23,10 +23,10 @@ links: []
    - JSON should reference patch branch, commit SHA, `wave`, and resume commands.
 3. Re-run sync with auto-continue:
    ```bash
-   forked sync --emit-conflicts .forked/conflicts/sync-continue.json --auto-continue --on-conflict bias
+   forked sync --emit-conflicts-path .forked/conflicts/sync-continue.json --auto-continue --on-conflict bias
    ```
    - Verify bias actions logged and next bundle increments `wave` and filename (`-2.json`).
-4. Enable blob export: `--conflict-blobs-dir .forked/conflicts/blobs`.
+4. Enable blob export: `--emit-conflict-blobs --conflict-blobs-dir .forked/conflicts/blobs`.
    - Ensure base/ours/theirs files created per path and referenced in JSON when diffs are null/binary.
 5. Test `--on-conflict exec` to ensure CLI propagates script exit codes and bundle path logging.
 6. Follow README CI snippet to ensure docs instructions align with behavior (including Windows POSIX note).

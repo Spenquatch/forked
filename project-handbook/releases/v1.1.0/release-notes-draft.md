@@ -28,7 +28,8 @@ The v1.1.0 release delivers the full operational tooling stack planned for this 
 
 ### Conflict Bundle Engine (TASK-004)
 - `forked build` and `forked sync` accept conflict options:
-  - `--emit-conflicts [PATH]` writes schema v2 bundles (binary detection, multi-wave numbering, POSIX shell note).
+  - `--emit-conflicts` writes schema v2 bundles to the default location (binary detection, multi-wave numbering, POSIX shell note).
+  - `--emit-conflicts-path PATH` stores bundles at a caller-provided path.
   - `--conflict-blobs-dir [DIR]` exports base/ours/theirs blobs for each conflicted file (always used for binary/large diffs).
   - `--on-conflict <stop|bias|exec>` controls behaviour:
     - `stop` (default) writes the bundle and exits with code 10.

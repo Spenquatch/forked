@@ -13,7 +13,7 @@ Shared collector now drives `forked build` and `forked sync`, emitting schema v2
 
 ## Milestones
 - [x] Shared conflict inspection utility captures blob IDs, diffs (with binary detection), wave metadata, and recommended resolution.
-- [x] `forked build --emit-conflicts/--conflict-blobs-dir` writes schema v2 bundles, handles binary/large files, and exits 10 on stop.
+- [x] `forked build --emit-conflicts`/`--emit-conflicts-path` with optional `--emit-conflict-blobs`/`--conflict-blobs-dir` writes schema v2 bundles, handles binary/large files, and exits 10 on stop.
 - [x] `forked sync` supports the same flags, honours `--auto-continue`, and logs bias applications plus multi-wave bundles.
 - [x] `--on-conflict exec/bias` hooks allow optional automation with safe defaults documented.
 - [x] JSON schema v2 documented and referenced from README + tests (maintaining backwards compatibility guidance).

@@ -58,6 +58,6 @@ Deliver feature-sliced workflows, guard policy overrides, conflict bundle automa
 
 ## Release Notes Draft
 - Feature-sliced overlays: `forked build --overlay/--features`, include/exclude globs, skip-upstream optimisation, provenance logging in build logs + git notes, and new `forked feature create/status` commands.
-- Conflict bundle engine v2 across build + sync with `--emit-conflicts`, `--conflict-blobs-dir`, `--on-conflict <stop|bias|exec>`, binary-aware diffs, multi-wave numbering, and deterministic exit codes.
+- Conflict bundle engine v2 across build + sync with `--emit-conflicts`/`--emit-conflicts-path`, `--emit-conflict-blobs`/`--conflict-blobs-dir`, `--on-conflict <stop|bias|exec>`, binary-aware diffs, multi-wave numbering, and deterministic exit codes.
 - Guard overrides/report v2, status JSON, and clean command entries to be appended once corresponding tasks land.
 - Draft notes tracked in `releases/v1.1.0/release-notes-draft.md` (updated after each feature lands).

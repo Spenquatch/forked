@@ -96,6 +96,6 @@ def worktree_for_branch(branch: str) -> Path | None:
             cur_path = line.split(" ", 1)[1]
         elif line.startswith("branch "):
             ref = line.split(" ", 1)[1]
-            if ref == f"refs/heads/{branch}":
+            if ref == f"refs/heads/{branch}" and cur_path is not None:
                 return Path(cur_path)
     return None

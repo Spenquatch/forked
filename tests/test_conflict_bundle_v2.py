@@ -62,7 +62,7 @@ def test_conflict_bundle_v2_build(git_repo, monkeypatch):
             "conflict_feature",
             "--id",
             "test",
-            "--emit-conflicts",
+            "--emit-conflicts-path",
             ".forked/conflicts/test",
             "--on-conflict",
             "stop",

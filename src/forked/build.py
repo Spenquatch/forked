@@ -249,11 +249,14 @@ def build_overlay(
     for branch in selection.patches:
         base = g.merge_base(cfg.branches.trunk, branch)
         commits = _rev_list_range(base, branch)
-        summary_entry = {
+        commit_entries: list[dict[str, str]] = []
+        skipped_entries: list[dict[str, str]] = []
+
+        summary_entry: dict[str, Any] = {
             "branch": branch,
             "commit_count": 0,
-            "commits": [],
-            "skipped_commits": [],
+            "commits": commit_entries,
+            "skipped_commits": skipped_entries,
             "skipped_count": 0,
             "total_commits": len(commits),
         }
@@ -272,7 +275,7 @@ def build_overlay(
         for sha in commits:
             summary = g.run(["show", "-s", "--format=%s", sha]).stdout.strip()
             if skip_shas and sha in skip_shas:
-                summary_entry["skipped_commits"].append({"sha": sha, "summary": summary})
+                skipped_entries.append({"sha": sha, "summary": summary})
                 summary_entry["skipped_count"] += 1
                 continue
 
@@ -387,6 +390,10 @@ def build_overlay(
                     raise typer.Exit(code=10)
 
                 if conflict_mode == "exec":
+                    if on_conflict_exec is None:
+                        raise typer.BadParameter(
+                            "--on-conflict exec requires --on-conflict-exec command."
+                        )
                     record["result"] = "exec"
                     command = on_conflict_exec.replace("{json}", str(bundle_path))
                     typer.echo(f"[build] Running conflict exec: {command}")
@@ -407,7 +414,7 @@ def build_overlay(
                 log_build("conflict")
                 raise typer.Exit(code=10)
 
-            summary_entry["commits"].append({"sha": sha, "summary": summary})
+            commit_entries.append({"sha": sha, "summary": summary})
             summary_entry["commit_count"] += 1
 
         if not summary_appended:
