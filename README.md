@@ -121,6 +121,19 @@ patches:
   order:
     - patch/contract-update
     - patch/service-logging
+features:
+  contract_update:
+    patches:
+      - patch/contract-update
+    sentinels:
+      must_match_upstream:
+        - api/contracts/**
+  service_logging:
+    patches:
+      - patch/service-logging
+overlays:
+  dev:
+    features: [contract_update, service_logging]
 guards:
   mode: warn                # warn | block | require-override
   both_touched: true
@@ -162,6 +175,8 @@ Key behaviours:
 | [`forked build`](#forked-build) | Rebuild an overlay branch (and optional worktree) from trunk + patches. |
 | [`forked guard`](#forked-guard) | Evaluate policies against an overlay and write a JSON report. |
 | [`forked status`](#forked-status) | Show trunk, patches, and the most recent overlays. |
+| [`forked feature create`](#forked-feature-create) | Scaffold numbered patch slices for a feature. |
+| [`forked feature status`](#forked-feature-status) | Display ahead/behind state for feature slices. |
 | [`forked publish`](#forked-publish) | Tag and/or push an overlay branch. |
 
 ### `forked init`
@@ -183,18 +198,48 @@ Fetches upstream, resets `trunk` to `upstream/<branch>`, then iterates through e
 ### `forked build`
 
 ```bash
-forked build [--id ID] [--no-worktree] [--auto-continue]
+forked build [--overlay PROFILE | --features NAME[,NAME...]] [--include PATTERN]...
+             [--exclude PATTERN]... [--id ID] [--skip-upstream-equivalents]
+             [--emit-conflicts [PATH]] [--conflict-blobs-dir [DIR]]
+             [--on-conflict MODE] [--on-conflict-exec COMMAND]
+             [--no-worktree] [--auto-continue] [--git-note/--no-git-note]
 ```
 
-- `--id` – overlay identifier (default: current date `YYYY-MM-DD`).
+- `--overlay PROFILE` – select features defined in `forked.yml.overlays.<profile>.features`. When omitted, all patches in `patches.order` are applied. If `--id` is not provided, the profile name becomes the overlay id.
+- `--features NAME[,NAME...]` – comma-separated list of feature keys to include. Mutually exclusive with `--overlay`.
+- `--include` / `--exclude` – add or remove patch branches via exact names or glob patterns (applied after feature/overlay resolution).
+- `--skip-upstream-equivalents` – skip cherry-picking commits already present on trunk (based on `git cherry -v`) and log the skipped counts per patch.
+- `--id` – overlay identifier (default: overlay profile name or current date `YYYY-MM-DD`).
 - `--no-worktree` – build directly in the current working tree instead of creating/reusing a worktree.
-- `--auto-continue` – after a cherry-pick conflict, apply path-bias globs (`forked.yml.path_bias`) and continue automatically; otherwise the command stops and surfaces the Git error.
+- `--emit-conflicts [PATH]` – write a conflict bundle (`schema_version: 2`) when a cherry-pick halts. Defaults to `.forked/conflicts/<id>-<wave>.json` when no path is provided.
+- `--conflict-blobs-dir [DIR]` – export base/ours/theirs blobs for each conflicted path (always used for binary/large files). Defaults to `.forked/conflicts/<id>/wave-<n>/` when the flag is present without a directory.
+- `--on-conflict MODE` – conflict policy: `stop` (default, exit code 10), `bias` (apply recommended ours/theirs resolutions and continue), or `exec` (run an external command).
+- `--on-conflict-exec COMMAND` – shell command invoked when `--on-conflict exec` is selected (use `{json}` as a placeholder for the bundle path).
+- `--auto-continue` – legacy alias for `--on-conflict bias`.
+- `--git-note/--no-git-note` – opt in/out of writing provenance notes to `refs/notes/forked-meta`.
 
 Behaviour highlights:
 
 - Worktree directories are reused between builds. If a stale directory blocks reuse, the CLI suffixes the path (e.g., `test-1`) and prints a reminder to run `git worktree prune`.
-- After each build the CLI prints a concise summary of applied patches and appends structured JSON telemetry to `.forked/logs/forked-build.log`.
-- Cherry-picks cover the entire range from `merge-base(trunk, patch)` to the patch tip, preserving commit ordering.
+- Build summaries now display applied versus skipped commits (`--skip-upstream-equivalents`) and record the active feature set in `.forked/logs/forked-build.log` alongside resolver inputs.
+- Conflict bundles capture multi-wave context, recommended resolutions, and blob locations. They are logged to `.forked/logs/forked-build.log` alongside exit metadata (status `conflict` for stop/exec, `success` when bias resolves conflicts).
+- Optional git notes capture the selected features/patches to make overlay provenance discoverable with `git notes show`.
+
+### `forked sync`
+
+```bash
+forked sync [--emit-conflicts [PATH]] [--conflict-blobs-dir [DIR]]
+            [--on-conflict MODE] [--on-conflict-exec COMMAND]
+            [--auto-continue]
+```
+
+- `--emit-conflicts [PATH]` – emit a rebase conflict bundle when a patch fails to rebase. Defaults to `.forked/conflicts/sync-<branch>-<wave>.json` when omitted.
+- `--conflict-blobs-dir [DIR]` – export base/ours/theirs blobs for each conflicted file (automatically enabled for binary/large entries when the flag is present).
+- `--on-conflict MODE` – `stop` (default, exit code `10`), `bias` (apply recommended resolutions and continue the rebase), or `exec` (delegate to an external command).
+- `--on-conflict-exec COMMAND` – command executed when `--on-conflict exec` is selected; `{json}` is replaced with the bundle path.
+- `--auto-continue` – alias for `--on-conflict bias`.
+
+Successful syncs return to the previously checked-out ref and log the run to `.forked/logs/forked-build.log` (`event: "forked.sync"`). When conflicts remain unresolved, the command exits with code `10` (or the external command’s status for `exec`).
 
 ### `forked guard`
 
@@ -228,6 +273,26 @@ forked status [--latest N]
 ```
 
 Shows upstream and trunk SHAs, lists patches in order, and prints the newest overlays with timestamps and both-touched counts.
+
+### `forked feature create`
+
+```bash
+forked feature create NAME [--slices N] [--slug TEXT]
+```
+
+- `NAME` – feature identifier (kebab/snake case recommended).
+- `--slices` – number of patch slices to create (default `1`).
+- `--slug` – optional suffix for each slice (e.g., `--slug initial` produces `patch/<name>/01-initial`).
+
+The command enforces a clean working tree, creates patch branches based on the current `trunk` tip, appends them to `forked.yml.patches.order`, and writes a new `features.<name>` entry. Branch creation fails fast if the feature already exists or if any target branch name is present.
+
+### `forked feature status`
+
+```bash
+forked feature status
+```
+
+Prints each feature from `forked.yml.features` with the SHA (first 12 characters) of every slice and its ahead/behind counts relative to `trunk`. Fully merged slices are marked accordingly, providing a quick glance at feature progress before building or publishing overlays.
 
 ### `forked publish`
 
@@ -270,16 +335,89 @@ Downstream tooling (CI, bots) can parse `violations` to fail builds or surface g
 
 ---
 
+## Conflict Bundles
+
+When `--emit-conflicts` is supplied, `forked build` and `forked sync` record conflict bundles (`schema_version: 2`) under `.forked/conflicts/<id>-<wave>.json`:
+
+```json
+{
+  "schema_version": 2,
+  "wave": 1,
+  "context": {
+    "mode": "build",
+    "overlay": "overlay/dev",
+    "patch_branch": "patch/conflict",
+    "patch_commit": "44b1b20...",
+    "merge_base": "6d913cc...",
+    "feature": "conflict_feature"
+  },
+  "files": [
+    {
+      "path": "app.py",
+      "binary": false,
+      "size_bytes": 29,
+      "precedence": {
+        "sentinel": "must_match_upstream",
+        "path_bias": "none",
+        "recommended": "ours",
+        "rationale": "matched sentinel must_match_upstream"
+      },
+      "commands": {
+        "accept_ours": "git checkout --ours -- 'app.py' && git add 'app.py'",
+        "accept_theirs": "git checkout --theirs -- 'app.py' && git add 'app.py'",
+        "open_mergetool": "git mergetool -- 'app.py'"
+      }
+    }
+  ],
+  "resume": {
+    "continue": "git cherry-pick --continue",
+    "abort": "git cherry-pick --abort",
+    "rebuild": "forked build --id dev --on-conflict stop"
+  },
+  "note": "Commands assume a POSIX-compatible shell (e.g. bash, git bash, WSL)."
+}
+```
+
+- **Wave numbering** – repeated conflicts in a single invocation append `-2.json`, `-3.json`, etc., and every wave is logged to `.forked/logs/forked-build.log` (`event: "forked.build"` or `"forked.sync"`).
+- **Binary & large files** – `binary: true` entries omit diffs, record `size_bytes`, and always write `base.txt`/`ours.txt`/`theirs.txt` into the configured blob directory.
+- **Automation hooks** – `--on-conflict bias` records auto-applied actions; `--on-conflict exec` retains the conflicted worktree and exits with the delegated command’s status.
+
+Exit codes: `10` for unresolved conflicts, external command status for exec mode, and raw Git exit codes for non-conflict failures.
+
+---
+
 ## Logs & Generated Artifacts
 
 | Path | Purpose |
 |------|---------|
-| `.forked/logs/forked-build.log` | Append-only JSON telemetry for each build (overlay id, reused path, per-branch commit summaries). |
+| `.forked/logs/forked-build.log` | Append-only JSON telemetry for each build (overlay id, resolver input/features, per-branch commit & skip summaries, reused path). |
 | `.forked/logs/forked-guard.log` | Append-only JSON telemetry for guard runs (overlay, mode, violations, optional debug). |
 | `.forked/report.json` | Latest guard report. |
 | `.forked/worktrees/<overlay-id>/` | Reused worktree for the overlay (removed by `git worktree prune`). |
 
 All of these paths are ignored via `.gitignore` so your repo stays clean.
+
+---
+
+## CI Example
+
+Capture bundles in CI and highlight a deterministic failure when exit code `10` occurs:
+
+```yaml
+- name: Build overlay with conflict bundle
+  run: |
+    set -e
+    forked build --overlay dev \
+      --emit-conflicts .forked/conflicts/ci \
+      --on-conflict stop || status=$?
+    if [ "${status:-0}" = "10" ]; then
+      bundle=$(ls .forked/conflicts/ci-*.json)
+      echo "::error::Conflict bundle generated at ${bundle}"
+      exit 1
+    fi
+```
+
+Upload `.forked/conflicts/` as an artifact so reviewers (or downstream automation) can inspect the JSON and Blob exports when a rebase/build fails.
 
 ---
 

@@ -18,7 +18,7 @@ links: []
 1. Run `forked status --json | jq '.status_version'` → expect `1`.
 2. Verify `overlays[0].selection.features` matches provenance from latest build log entry.
 3. Run `forked status --json --latest 1` after multiple builds → ensure only the newest overlay returned.
-4. Delete provenance log entry temporarily → ensure CLI falls back to resolver and logs warning.
+4. Delete provenance log entry temporarily → ensure CLI falls back to resolver, sets `selection.source == "derived"`, and logs warning (stderr).
 
 ## Sign-off
 - [ ] JSON schema matches spec and passes tests.

@@ -1,8 +1,8 @@
 """Configuration loading for Forked CLI."""
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 import typer
 import yaml
 
@@ -75,6 +75,19 @@ class Config:
     path_bias: PathBias = field(default_factory=PathBias)
     worktree: WorktreeCfg = field(default_factory=WorktreeCfg)
     policy_overrides: PolicyOverrides = field(default_factory=PolicyOverrides)
+    features: Dict[str, "Feature"] = field(default_factory=dict)
+    overlays: Dict[str, "OverlayProfile"] = field(default_factory=dict)
+
+
+@dataclass
+class Feature:
+    patches: List[str] = field(default_factory=list)
+    sentinels: Sentinels = field(default_factory=Sentinels)
+
+
+@dataclass
+class OverlayProfile:
+    features: List[str] = field(default_factory=list)
 
 
 def load_config(path: Path = DEFAULT_CFG_PATH) -> Config:
@@ -105,6 +118,26 @@ def load_config(path: Path = DEFAULT_CFG_PATH) -> Config:
     worktree = WorktreeCfg(**data.get("worktree", {}))
     policy_overrides = PolicyOverrides(**data.get("policy_overrides", {}))
 
+    features_raw = data.get("features", {}) or {}
+    features: Dict[str, Feature] = {}
+    for name, payload in features_raw.items():
+        if not isinstance(payload, dict):
+            continue
+        sent_cfg = payload.get("sentinels", {}) or {}
+        features[name] = Feature(
+            patches=list(payload.get("patches", []) or []),
+            sentinels=Sentinels(**sent_cfg),
+        )
+
+    overlays_raw = data.get("overlays", {}) or {}
+    overlays: Dict[str, OverlayProfile] = {}
+    for name, payload in overlays_raw.items():
+        if not isinstance(payload, dict):
+            continue
+        overlays[name] = OverlayProfile(
+            features=list(payload.get("features", []) or [])
+        )
+
     return Config(
         upstream=upstream,
         branches=branches,
@@ -113,6 +146,8 @@ def load_config(path: Path = DEFAULT_CFG_PATH) -> Config:
         path_bias=path_bias,
         worktree=worktree,
         policy_overrides=policy_overrides,
+        features=features,
+        overlays=overlays,
     )
 
 
@@ -122,29 +157,14 @@ def write_skeleton(path: Path = DEFAULT_CFG_PATH):
         return
 
     cfg = Config()
-    path.write_text(
-        yaml.safe_dump(
-            {
-                "version": cfg.version,
-                "upstream": vars(cfg.upstream),
-                "branches": vars(cfg.branches),
-                "patches": {"order": []},
-                "guards": {
-                    "mode": cfg.guards.mode,
-                    "both_touched": cfg.guards.both_touched,
-                    "sentinels": {
-                        "must_match_upstream": [],
-                        "must_diverge_from_upstream": [],
-                    },
-                    "size_caps": {"max_loc": 0, "max_files": 0},
-                },
-                "path_bias": {"ours": [], "theirs": []},
-                "worktree": {"enabled": True, "root": ".forked/worktrees"},
-                "policy_overrides": {
-                    "require_trailer": False,
-                    "trailer_key": "Forked-Override",
-                },
-            },
-            sort_keys=False,
-        )
-    )
+    path.write_text(dump_config(cfg))
+
+
+def dump_config(cfg: Config) -> str:
+    """Serialise a ``Config`` dataclass to YAML."""
+    return yaml.safe_dump(asdict(cfg), sort_keys=False)
+
+
+def write_config(cfg: Config, path: Path = DEFAULT_CFG_PATH):
+    """Persist the provided configuration back to disk."""
+    path.write_text(dump_config(cfg))

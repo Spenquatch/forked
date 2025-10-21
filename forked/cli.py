@@ -3,16 +3,46 @@
 from datetime import date, datetime
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import typer
 from rich import print as rprint
-from .config import Config, load_config, write_skeleton
+from .config import Config, Feature, load_config, write_config, write_skeleton
 from . import gitutil as g
 from .build import build_overlay
 from .guards import both_touched, sentinels, size_caps
+from .sync import run_sync
+from .resolver import ResolutionError, resolve_selection
 
 
 app = typer.Typer(add_completion=False)
+feature_app = typer.Typer(help="Feature slice management")
+app.add_typer(feature_app, name="feature")
+
+
+def _parse_csv_option(raw: Optional[str]) -> List[str]:
+    if not raw:
+        return []
+    items = []
+    for chunk in raw.split(","):
+        value = chunk.strip()
+        if value:
+            items.append(value)
+    return items
+
+
+def _ahead_behind(trunk: str, branch: str) -> Optional[Tuple[int, int]]:
+    cp = g.run(["rev-list", "--left-right", "--count", f"{trunk}...{branch}"], check=False)
+    if cp.returncode != 0:
+        return None
+    parts = cp.stdout.strip().split()
+    if len(parts) != 2:
+        return None
+    try:
+        behind = int(parts[0])
+        ahead = int(parts[1])
+    except ValueError:
+        return None
+    return behind, ahead
 
 
 def _overlays_by_date(prefix: str) -> List[Tuple[str, int]]:
@@ -100,35 +130,225 @@ def status(latest: int = typer.Option(1, "--latest", min=1, help="Show N newest 
 
 
 @app.command()
-def sync():
+def sync(
+    emit_conflicts: Optional[str] = typer.Option(
+        None,
+        "--emit-conflicts",
+        help="Write conflict bundle JSON to PATH (default auto under .forked/conflicts)",
+        metavar="[PATH]",
+        show_default=False,
+        flag_value="__AUTO__",
+    ),
+    conflict_blobs_dir: Optional[str] = typer.Option(
+        None,
+        "--conflict-blobs-dir",
+        help="Directory for base/ours/theirs blob exports",
+        metavar="[DIR]",
+        show_default=False,
+        flag_value="__AUTO__",
+    ),
+    on_conflict: str = typer.Option(
+        "stop",
+        "--on-conflict",
+        help="Conflict handling mode: stop, bias, or exec",
+        metavar="MODE",
+        show_default=True,
+    ),
+    on_conflict_exec: Optional[str] = typer.Option(
+        None,
+        "--on-conflict-exec",
+        help="Shell command to run when --on-conflict exec (use {json} placeholder)",
+        metavar="COMMAND",
+    ),
+    auto_continue: bool = typer.Option(
+        False,
+        "--auto-continue",
+        help="Alias for --on-conflict bias",
+    ),
+):
     cfg = load_config()
-    prev_ref = g.current_ref()
-    g.ensure_clean()
-    g.run(["fetch", cfg.upstream.remote])
-    g.run(["checkout", cfg.branches.trunk])
-    g.run(["reset", "--hard", f"{cfg.upstream.remote}/{cfg.upstream.branch}"])
-    for branch in cfg.patches.order:
-        g.run(["checkout", branch])
-        cp = g.run(["rebase", cfg.branches.trunk], check=False)
-        if cp.returncode != 0:
-            typer.echo(f"[sync] Rebase stopped on {branch}. Resolve and rerun `forked sync`.")
-            raise typer.Exit(code=4)
-    if prev_ref:
-        g.run(["checkout", prev_ref])
+    conflict_mode = on_conflict.lower()
+    if conflict_mode in {"bias-continue", "bias_continue"}:
+        conflict_mode = "bias"
+    if conflict_mode not in {"stop", "bias", "exec"}:
+        raise typer.BadParameter("--on-conflict must be one of: stop, bias, exec")
+    if on_conflict_exec and conflict_mode != "exec":
+        conflict_mode = "exec"
+
+    telemetry = run_sync(
+        cfg,
+        emit_conflicts=emit_conflicts,
+        conflict_blobs_dir=conflict_blobs_dir,
+        on_conflict=conflict_mode,
+        on_conflict_exec=on_conflict_exec,
+        auto_continue=auto_continue,
+    )
+
+    branches = telemetry.get("branches", [])
+    if branches:
+        for entry in branches:
+            status = entry.get("status", "")
+            typer.echo(f"[sync] {entry['branch']}: {status}")
+
+    conflict_entries = telemetry.get("conflicts", []) or []
+    if conflict_entries:
+        bundles = ", ".join(entry.get("bundle", "") for entry in conflict_entries)
+        typer.echo(f"[sync] Conflict bundle(s) recorded: {bundles}")
+
     rprint("[green]Sync complete: trunk fast-forwarded, patches rebased.[/green]")
 
 
 @app.command()
 def build(
-    id: str = typer.Option(date.today().isoformat(), "--id"),
+    overlay: Optional[str] = typer.Option(
+        None, "--overlay", help="Overlay profile defined in forked.yml"
+    ),
+    features_arg: Optional[str] = typer.Option(
+        None,
+        "--features",
+        "-f",
+        help="Comma-separated list of features to include (mutually exclusive with --overlay)",
+    ),
+    include: List[str] = typer.Option(
+        None,
+        "--include",
+        help="Patch glob to force-include (can be provided multiple times)",
+        show_default=False,
+        metavar="PATTERN",
+    ),
+    exclude: List[str] = typer.Option(
+        None,
+        "--exclude",
+        help="Patch glob to exclude (can be provided multiple times)",
+        show_default=False,
+        metavar="PATTERN",
+    ),
+    id: Optional[str] = typer.Option(
+        None,
+        "--id",
+        help="Overlay identifier; defaults to profile name when using --overlay, otherwise today's date",
+    ),
     no_worktree: bool = typer.Option(False, "--no-worktree"),
     auto_continue: bool = typer.Option(False, "--auto-continue"),
+    skip_upstream_equivalents: bool = typer.Option(
+        False,
+        "--skip-upstream-equivalents",
+        help="Skip commits already present in trunk (uses git cherry)",
+    ),
+    git_note: bool = typer.Option(
+        True,
+        "--git-note/--no-git-note",
+        help="Write provenance note to refs/notes/forked-meta",
+    ),
+    emit_conflicts: Optional[str] = typer.Option(
+        None,
+        "--emit-conflicts",
+        help="Write conflict bundle JSON to PATH (default: .forked/conflicts/<id>-<wave>.json)",
+        metavar="[PATH]",
+        show_default=False,
+        flag_value="__AUTO__",
+    ),
+    conflict_blobs_dir: Optional[str] = typer.Option(
+        None,
+        "--conflict-blobs-dir",
+        help="Directory for base/ours/theirs blob exports (default auto when flag used)",
+        metavar="[DIR]",
+        show_default=False,
+        flag_value="__AUTO__",
+    ),
+    on_conflict: str = typer.Option(
+        "stop",
+        "--on-conflict",
+        help="Conflict handling mode: stop, bias, or exec",
+        metavar="MODE",
+        show_default=True,
+    ),
+    on_conflict_exec: Optional[str] = typer.Option(
+        None,
+        "--on-conflict-exec",
+        help="Shell command to run when --on-conflict exec (use {json} placeholder)",
+        metavar="COMMAND",
+    ),
 ):
     cfg = load_config()
-    overlay, worktree = build_overlay(cfg, id, use_worktree=(not no_worktree), auto_continue=auto_continue)
-    rprint(f"[green]Built overlay[/green] [bold]{overlay}[/bold]")
+    feature_list = _parse_csv_option(features_arg)
+    try:
+        selection = resolve_selection(
+            cfg,
+            overlay=overlay,
+            features=feature_list or None,
+            include=include or [],
+            exclude=exclude or [],
+        )
+    except ResolutionError as exc:
+        typer.secho(f"[build] {exc}", fg=typer.colors.RED)
+        raise typer.Exit(code=2)
+
+    overlay_id = id or (overlay or date.today().isoformat())
+
+    conflict_mode = on_conflict.lower()
+    if conflict_mode in {"bias-continue", "bias_continue"}:
+        conflict_mode = "bias"
+    if conflict_mode not in {"stop", "bias", "exec"}:
+        raise typer.BadParameter("--on-conflict must be one of: stop, bias, exec")
+    if on_conflict_exec and conflict_mode != "exec":
+        conflict_mode = "exec"
+
+    if selection.unmatched_include:
+        typer.secho(
+            "[build] Warning: include patterns matched no patches: "
+            + ", ".join(selection.unmatched_include),
+            fg=typer.colors.YELLOW,
+        )
+    if selection.unmatched_exclude:
+        typer.secho(
+            "[build] Warning: exclude patterns matched no patches: "
+            + ", ".join(selection.unmatched_exclude),
+            fg=typer.colors.YELLOW,
+        )
+
+    if selection.active_features:
+        typer.echo("[build] Active features: " + ", ".join(selection.active_features))
+    else:
+        typer.echo("[build] Active features: (none)")
+    typer.echo(f"[build] Applying {len(selection.patches)} patch branch(es)")
+
+    overlay_branch, worktree, telemetry = build_overlay(
+        cfg,
+        overlay_id,
+        selection,
+        use_worktree=(not no_worktree),
+        auto_continue=auto_continue,
+        skip_upstream_equivalents=skip_upstream_equivalents,
+        write_git_note=git_note,
+        emit_conflicts=emit_conflicts,
+        conflict_blobs_dir=conflict_blobs_dir,
+        on_conflict=conflict_mode,
+        on_conflict_exec=on_conflict_exec,
+    )
+
+    if selection.overlay_profile:
+        rprint(f"[bold]Overlay profile:[/bold] {selection.overlay_profile}")
+    if selection.include or selection.exclude:
+        filters: List[str] = []
+        if selection.include:
+            filters.append("include=" + ",".join(selection.include))
+        if selection.exclude:
+            filters.append("exclude=" + ",".join(selection.exclude))
+        rprint("[bold]Selection filters:[/bold] " + "; ".join(filters))
+
+    rprint(f"[green]Built overlay[/green] [bold]{overlay_branch}[/bold]")
     if not no_worktree and cfg.worktree.enabled:
         rprint(f"Worktree: {worktree}")
+
+    conflict_entries = telemetry.get("conflicts", []) or []
+    if conflict_entries:
+        bundles = ", ".join(entry.get("bundle", "") for entry in conflict_entries)
+        typer.echo(f"[build] Conflict bundle(s) recorded: {bundles}")
+
+    skipped_total = sum(entry.get("skipped_count", 0) for entry in telemetry["patches"])
+    if skip_upstream_equivalents:
+        typer.echo(f"[build] Skipped {skipped_total} upstream-equivalent commit(s)")
 
 
 @app.command()
@@ -256,3 +476,98 @@ def main():
 
 if __name__ == "__main__":
     main()
+@feature_app.command("create")
+def feature_create(
+    name: str = typer.Argument(..., help="Feature name (kebab-case recommended)"),
+    slices: int = typer.Option(1, "--slices", min=1, help="Number of patch slices to scaffold"),
+    slug: Optional[str] = typer.Option(
+        None,
+        "--slug",
+        help="Optional suffix for slice branches (e.g. 'initial'); defaults to numeric only",
+    ),
+):
+    cfg = load_config()
+    g.ensure_clean()
+
+    if name in cfg.features:
+        typer.secho(f"[feature] Feature '{name}' already exists in forked.yml.", fg=typer.colors.RED)
+        raise typer.Exit(code=2)
+
+    slug_fragment = slug.replace(" ", "-") if slug else ""
+    new_patches: List[str] = []
+
+    # Ensure trunk exists before creating branches.
+    trunk_cp = g.run(["rev-parse", cfg.branches.trunk], check=False)
+    if trunk_cp.returncode != 0:
+        typer.secho(
+            f"[feature] Trunk branch '{cfg.branches.trunk}' not found. Run `forked sync` first.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
+
+    for index in range(1, slices + 1):
+        suffix = f"{index:02d}"
+        if slug_fragment:
+            suffix = f"{suffix}-{slug_fragment}"
+        branch_name = f"patch/{name}/{suffix}"
+        if branch_name in cfg.patches.order:
+            typer.secho(
+                f"[feature] Patch '{branch_name}' already listed in forked.yml.patches.order.",
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(code=2)
+        existing = g.run(["show-ref", "--verify", f"refs/heads/{branch_name}"], check=False)
+        if existing.returncode == 0:
+            typer.secho(
+                f"[feature] Branch '{branch_name}' already exists; choose a different feature name.",
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(code=2)
+        g.run(["branch", branch_name, cfg.branches.trunk])
+        new_patches.append(branch_name)
+
+    cfg.patches.order.extend(new_patches)
+    cfg.features[name] = Feature(patches=new_patches)
+    write_config(cfg)
+
+    rprint(f"[green]Created feature[/green] [bold]{name}[/bold]")
+    for branch_name in new_patches:
+        rprint(f"  • {branch_name}")
+
+
+@feature_app.command("status")
+def feature_status():
+    cfg = load_config()
+    if not cfg.features:
+        typer.echo("[feature] No features defined in forked.yml.")
+        return
+
+    trunk = cfg.branches.trunk
+    typer.echo(f"[feature] Trunk reference: {trunk}")
+
+    first = True
+    for feature_name, feature_cfg in cfg.features.items():
+        if not first:
+            typer.echo("")
+        first = False
+        typer.echo(f"{feature_name}:")
+        patches = feature_cfg.patches or []
+        if not patches:
+            typer.echo("  (no slices defined)")
+            continue
+        for patch_branch in patches:
+            cp = g.run(["rev-parse", patch_branch], check=False)
+            if cp.returncode != 0:
+                typer.secho(f"  - {patch_branch}: branch missing", fg=typer.colors.RED)
+                continue
+            sha = cp.stdout.strip()
+            ahead_behind = _ahead_behind(trunk, patch_branch)
+            if ahead_behind is None:
+                typer.echo(f"  - {patch_branch}: {sha[:12]} (unable to compute ahead/behind)")
+                continue
+            behind, ahead = ahead_behind
+            if ahead == 0 and behind == 0:
+                status = "merged"
+            else:
+                status = f"{ahead} ahead / {behind} behind"
+            typer.echo(f"  - {patch_branch}: {sha[:12]} ({status})")

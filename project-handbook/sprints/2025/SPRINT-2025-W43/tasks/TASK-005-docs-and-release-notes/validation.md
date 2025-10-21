@@ -10,7 +10,7 @@ links: []
 # Validation Guide
 
 - [ ] `make validate`
-- [ ] README section cross-links (feature pages, CLI help) resolve.
+- [ ] README sections updated for overrides, status JSON, clean command, skip upstream, conflict bundle v2 (with anchors tested).
 - [ ] Changelog entry matches feature scope and release plan.
 - [ ] Sample commands in README copy/paste cleanly (wrap <80 chars).
 - [ ] Provide summary + links in daily status update.

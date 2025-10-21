@@ -3,16 +3,16 @@ title: Conflict Bundle Engine
 feature: conflict-bundle-automation
 decision: ADR-0004
 owner: @ai-agent
-status: todo
+status: review
 story_points: 3
 depends_on: [TASK-003]
 prio: P0
 due: 2025-10-24
 acceptance:
-  - Shared conflict collector writes schema v2 JSON with context, precedence, wave number, binary metadata, and resume hints.
-  - `forked build --emit-conflicts` exits 10, outputs numbered bundles, and persists blob exports for binary/large files.
-  - `forked sync --emit-conflicts` reuses collector, respects `--auto-continue`, and logs bias applications/wave bundles.
-  - README/doc updates include schema v2 snippet, CI integration example, and Windows shell note.
+  - Shared conflict collector writes schema v2 JSON with context, precedence, wave number, binary metadata, shell note, and resume hints.
+  - `forked build --emit-conflicts` exits 10, outputs numbered bundles per conflict wave, and persists blob exports for binary/large files.
+  - `forked sync --emit-conflicts` reuses collector, respects `--auto-continue`, numbers waves sequentially, and logs bias applications per wave.
+  - README/doc updates include schema v2 snippet, CI integration example, Windows shell note, and guidance on bundle numbering/exit behaviour.
 links:
   - ../../../../adr/0004-conflict-bundle-automation.md
   - ../../../../../Forked CLI Expansion Implementation Plan.md

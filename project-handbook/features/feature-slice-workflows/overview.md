@@ -16,9 +16,9 @@ Purpose
 - Model fork work as feature slices with explicit patch lists, reusable overlay profiles, and guard policies that understand the active feature set.
 
 Outcomes
-- `forked build` can target named overlay profiles, ad-hoc feature sets, and include/exclude patch globs without abandoning global patch order.
+- `forked build` can target named overlay profiles, ad-hoc feature sets, include/exclude patch globs, and optionally skip upstream-equivalent commits while retaining global order.
 - Developers scaffold feature slice branches via `forked feature create` and inspect drift with `forked feature status`.
-- Guard execution merges global and feature-level sentinels, and reports risk per feature to focus reviews.
+- Guard execution merges global/feature-level sentinels, ingests provenance for feature context, and reports risk per feature.
 - `forked.yml` schema captures features, overlays, and optional per-feature sentinel rules with validation.
 
 State

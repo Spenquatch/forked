@@ -81,6 +81,7 @@ print("hello upstream with logging")
 PY
   git commit -am "feat: add service logging" >/dev/null
   git push origin patch/service-logging >/dev/null
+  git checkout main >/dev/null
 popd >/dev/null
 
 # Create origin bare repo to simulate fork remote (optional but useful)

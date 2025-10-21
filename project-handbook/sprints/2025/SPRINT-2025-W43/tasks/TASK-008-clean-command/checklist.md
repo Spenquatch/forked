@@ -10,7 +10,7 @@ links: []
 # Completion Checklist
 
 - [ ] Dry-run output clearly lists candidates and pending commands.
-- [ ] Destructive path gated behind `--confirm` (or absence of `--dry-run`).
+- [ ] Destructive path gated behind `--no-dry-run --confirm` (explicit confirmation required).
 - [ ] Overlay pruning respects `--keep`, `--overlays` (age/pattern), and skips tagged/active overlays.
 - [ ] Worktree pruning uses Git + filesystem checks without touching active worktrees.
 - [ ] Conflict bundle cleanup retains most recent bundle per overlay.

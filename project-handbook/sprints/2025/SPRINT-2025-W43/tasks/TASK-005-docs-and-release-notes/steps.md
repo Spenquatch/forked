@@ -10,8 +10,10 @@ links: []
 # Implementation Steps: Docs & Release Notes Refresh
 
 ## Step 1: README Updates
-- [ ] Add "Feature Slice Workflows" section covering config schema, build flags, feature commands.
-- [ ] Document conflict bundle usage with CLI snippets and bundle schema overview.
+- [ ] Add/refresh sections for feature slice workflows (config schema, provenance, `--skip-upstream-equivalents`).
+- [ ] Document conflict bundle v2 (binary handling, wave numbering, Windows POSIX note) with CLI snippets.
+- [ ] Document guard overrides (`mode=require-override`) and override discovery order.
+- [ ] Document `forked status --json` schema + examples and `forked clean` workflow (dry-run/confirm semantics).
 - [ ] Update quickstart / smoke checklist if new steps required.
 
 ## Step 2: Handbook Refresh

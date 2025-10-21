@@ -15,8 +15,8 @@ tags: [testing]
 ## Manual
 1. Create sample overlays + worktrees (some tagged, some stale).
 2. Run `forked clean --dry-run --overlays 30d --keep 2` and confirm only stale entries listed.
-3. Run `forked clean --overlays 'overlay/tmp-*' --confirm` and ensure matching branches deleted.
-4. Test conflict pruning: touch `.forked/conflicts/*`, run `forked clean --conflicts --confirm`.
+3. Run `forked clean --overlays 'overlay/tmp-*' --no-dry-run --confirm` and ensure matching branches deleted.
+4. Test conflict pruning: touch `.forked/conflicts/*`, run `forked clean --conflicts --no-dry-run --confirm`.
 
 ## Regression
 - Validate `forked clean` output is logged/communicated in release notes.

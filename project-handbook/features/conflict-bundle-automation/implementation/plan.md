@@ -10,35 +10,33 @@ tags: [implementation, plan]
 
 ## Scope
 - Provide consistent conflict bundle generation for build and sync flows.
-- Support optional blob exports and deterministic exit codes.
-- Add conflict handling knobs: `--on-conflict stop|bias|exec`.
-- Document schema v1 and integration guidance.
+- Support optional blob exports, deterministic exit codes, and multi-wave numbering.
+- Document schema v2 (binary handling, shell metadata) and sync auto-continue policy.
 
 ## Work Breakdown
 1. **Shared Conflict Collector**
-   - [ ] Extract helper to gather conflict metadata (blob ids, diffs, precedence).
-   - [ ] Implement serializer writing JSON bundle + optional blob directories.
-   - [ ] Add unit tests covering precedence + command hints.
+   - [ ] Gather conflict metadata (blob ids, diffs, precedence) and include `wave`, `binary`, `size_bytes`, `shell` fields.
+   - [ ] Handle binary/large files via blob dumps and diff suppression (`diffs.* = null`).
+   - [ ] Emit bundles under `.forked/conflicts/<overlay-id>-<wave>.json`; append entries to `.forked/logs/forked-build.log` with wave info.
+   - [ ] Add POSIX shell metadata and note for Windows guidance.
 2. **Build Integration**
-   - [ ] Add CLI options (`--emit-conflicts`, `--conflict-blobs-dir`, `--on-conflict`, `--on-conflict-exec`).
-   - [ ] Hook collector into cherry-pick error path, ensure worktree resets on abort.
-   - [ ] Exit `10` after successful bundle write; log bundle location.
+   - [ ] Wire CLI options (`--emit-conflicts`, `--conflict-blobs-dir`, `--on-conflict`, `--on-conflict-exec`).
+   - [ ] Hook collector into cherry-pick failure path; log bundle location and wave number.
+   - [ ] Exit code `10` on conflict bundles; propagate child status for `--on-conflict exec`.
 3. **Sync Integration**
-   - [ ] Extend rebase loop to invoke collector when `git rebase` stops.
-   - [ ] Share bundle path computation + exit codes with build.
-   - [ ] Support continuing/aborting sync via resume hints.
-4. **Docs & Examples**
-   - [ ] Add README section for conflict bundles (JSON snippet + blob directory layout).
-   - [ ] Provide CI snippet demonstrating exit-code handling.
-   - [ ] Update changelog + feature status accordingly.
+   - [ ] Share collector; default to stop-on-conflict.
+   - [ ] Implement `--auto-continue` bias loop (apply path bias, log actions, increment wave).
+   - [ ] Ensure context fields (`patch_branch`, `patch_commit`, `merge_base`) populated per wave.
+4. **Docs & Tests**
+   - [ ] Update README/handbook with schema v2, wave numbering, Windows note, and CI example.
+   - [ ] Add unit/integration tests for binary files, multi-wave scenarios, exec hooks, and sync auto-continue.
 
 ## Validation
-- Unit tests for serializer (sample conflict data → expected JSON).
-- Integration test: intentionally create conflict during build; assert JSON file and exit 10.
-- Integration test: conflict during sync rebase; confirm bundle and exit 10.
-- Manual QA: run `forked build --emit-conflicts .forked/conflicts/test.json` and inspect blob exports.
+- `pytest tests/test_conflict_bundle_v2.py -q`
+- `pytest tests/test_sync_conflict_autocontinue.py -q`
+- Manual validation per sprint task.
 
-## Deliverables
-- Bundle schema markdown/README section.
-- New CLI help text for conflict flags.
-- Feature status and changelog updates.
+## Risks & Mitigations
+- **Risk**: Large blobs inflate storage. Mitigation: keep blob-export optional and document cleanup.
+- **Risk**: Multi-wave numbering confusion. Mitigation: log wave info and suffix filenames consistently.
+- **Risk**: Platform differences. Mitigation: document POSIX shell requirement for commands.

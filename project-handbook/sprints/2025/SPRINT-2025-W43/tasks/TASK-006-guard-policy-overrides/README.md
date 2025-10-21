@@ -25,7 +25,7 @@ links: [../../../features/guard-automation/overview.md, ../../plan.md, ../../../
 4. Capture verification in `validation.md` and tick `checklist.md` items before handoff.
 
 ## Context & Background
-Addendum v1.1 requires guard runs in `mode=require-override` to validate explicit escalation markers, bump the report schema to version 2, and surface provenance-driven feature lists. The override logic pulls from commit trailers, annotated tags, and `git notes`.
+Addendum v1.1 requires guard runs in `mode=require-override` to validate explicit escalation markers, bump the report schema to version 2, and surface provenance-driven feature lists. The override logic pulls from commit trailers, annotated tags, and `git notes` (commit → tag → note precedence).
 
 ## Quick Start
 ```bash

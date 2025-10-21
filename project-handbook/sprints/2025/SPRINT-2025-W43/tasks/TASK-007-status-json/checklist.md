@@ -10,7 +10,8 @@ links: []
 # Completion Checklist
 
 - [ ] `forked status --json` emits `status_version: 1` schema with upstream/trunk/patch data.
-- [ ] Overlay selection metadata populated from provenance (features, patches, timestamps).
+- [ ] Overlay selection metadata populated from provenance (features, patches, timestamps, skip counts).
+- [ ] `both_touched_count` sourced from latest guard report when present (otherwise `null` with warning).
 - [ ] `--latest N` respected with sensible defaults and empty-state handling.
 - [ ] Tests updated/added and fixtures stored as needed.
 - [ ] README/handbook updated with schema documentation and examples.

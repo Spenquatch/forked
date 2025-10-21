@@ -47,7 +47,12 @@ make task-status id=TASK-XXX status=done     # Mark complete
 ### Initial Setup & Demo Repo
 - Optional sample fork: `./scripts/setup-demo-repo.sh demo-forked`
 - Primary docs: README smoke/release checklists, `project-handbook/docs/DEMO_REPO.md`
-- ADRs to read first: `project-handbook/adr/0001-overlay-worktree-contract.md`, `project-handbook/adr/0002-guard-cli-contract.md`
+- ADRs to read first:
+- `project-handbook/adr/0001-overlay-worktree-contract.md`
+- `project-handbook/adr/0002-guard-cli-contract.md`
+- `project-handbook/adr/0003-feature-slice-workflows.md`
+- `project-handbook/adr/0004-conflict-bundle-automation.md`
+- `project-handbook/adr/0005-operational-tooling.md`
 
 ### 1. **Understand Current Context**
 ```bash
@@ -57,22 +62,25 @@ make release-status     # Understand current release goals
 make task-list          # See available work
 ```
 
-**Current focus (v1.0.0)**
-- Release plan: `project-handbook/releases/v1.0.0/plan.md`
-- Features: `overlay-infrastructure`, `guard-automation`, `release-operations`
+**Current focus (v1.1.0)**
+- Release plan: `project-handbook/releases/v1.1.0/plan.md`
+- Priority features:
+  `feature-slice-workflows`, `conflict-bundle-automation`, `guard-automation`,
+  `status-json`, `clean-command`, `release-operations`
 - Sprint tasks live under `sprints/current/tasks/`; update status via `make task-status`
+- Current sprint tasks: TASK-003-feature-resolver-and-cli, TASK-004-conflict-bundle-engine, TASK-005-docs-and-release-notes, TASK-006-guard-policy-overrides, TASK-007-status-json, TASK-008-clean-command
 
 ### 2. **Pick Up Task**
 ```bash
-# Choose a task from the list
-make task-show id=TASK-001              # See task details
-make task-status id=TASK-001 status=doing    # Claim the task
+# Choose a task from the list (replace ID with current sprint task, e.g. TASK-003)
+make task-show id=TASK-003-feature-resolver-and-cli
+make task-status id=TASK-003 status=doing
 ```
 
 ### 3. **Get Implementation Guidance**
 ```bash
 # Navigate to task directory
-cd sprints/current/tasks/TASK-001-*/
+cd sprints/current/tasks/TASK-003-feature-resolver-and-cli/
 
 # Read implementation guidance
 cat README.md           # Agent navigation & task overview
@@ -95,13 +103,13 @@ make sprint-status      # See overall progress
 ### 5. **Submit for Review**
 ```bash
 # Validate your work
-cat sprints/current/tasks/TASK-001-*/checklist.md    # Check completion criteria
+cat sprints/current/tasks/TASK-003-*/checklist.md    # Check completion criteria
 
 # Submit for review
-make task-status id=TASK-001 status=review
+make task-status id=TASK-003 status=review
 
 # After approval
-make task-status id=TASK-001 status=done
+make task-status id=TASK-003 status=done
 ```
 
 ## Key Rules for Agents

@@ -9,11 +9,11 @@ tags: [status]
 # Status: Status JSON
 
 ## Summary
-Plan v1.1 introduces a schema-backed `forked status --json` output so automation can ingest fork state, overlay provenance, and patch drift. Implementation pending.
+Plan v1.1 introduces a schema-backed `forked status --json` output so automation can ingest fork state, overlay provenance (features/patches/skip counts), patch drift, and guard-driven `both_touched` metrics. Implementation pending.
 
 ## Milestones
-- [ ] Emit `status_version: 1` JSON from `forked status --json`.
-- [ ] Populate overlay `selection` from `.forked/logs/forked-build.log` / notes.
+- [ ] Emit `status_version: 1` JSON from `forked status --json` (backed by provenance).
+- [ ] Populate overlay `selection` (with `selection.source`) from `.forked/logs/forked-build.log` / notes; fall back gracefully when absent.
 - [ ] Support `--latest N` overlays with sane defaults and empty-state messaging.
 - [ ] Document schema and example usage in README.
 

@@ -16,7 +16,7 @@ Purpose
 - Provide a safe `forked clean` command to prune stale worktrees, overlay branches, and conflict bundles with explicit dry-run and confirmation gating.
 
 Outcomes
-- Operators can run clean-up routines without hand-written shell loops.
+- Operators can run clean-up routines without hand-written shell loops and retain an audit trail in `.forked/logs/clean.log`.
 - Tagged/active overlays remain untouched; retention policy enforced via `--keep`.
 - Conflict bundles and worktrees are tidied on a predictable cadence.
 

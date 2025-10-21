@@ -27,7 +27,7 @@ links: [../../../features/feature-slice-workflows/overview.md, ../../plan.md, ..
 6. Update status to `review` (then `done`) once acceptance criteria satisfied.
 
 ## Context & Background
-Implements feature-driven overlays described in the expansion plan. Work spans config parsing, build command wiring, new Typer subcommands, and guard attribution updates.
+Implements feature-driven overlays described in the expansion plan. Work spans config parsing, build command wiring, new Typer subcommands, provenance logging (build log + optional git notes), and skip-upstream optimisation.
 
 ## Quick Start
 ```bash

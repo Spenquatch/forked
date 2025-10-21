@@ -110,8 +110,8 @@ Key details:
 
 - Ahead/behind counts are computed versus `trunk` using `git rev-list --left-right --count`; failure to compute (e.g. patch missing) yields zeroes plus a warning in `stderr`.
 - Overlay list defaults to the latest 5 entries; `--latest N` adjusts the window.
-- During `forked build`, we append provenance to `.forked/logs/forked-build.log` including timestamp, trunk SHA, selected patches, features, resolver metadata, and commit ranges per patch. We also write optional notes to `refs/notes/forked-meta` for the overlay tip (`patches:...;features:...`). Guard prefers log/notes metadata before recomputing selections so reports include `report.features`.
-- `forked status --json` reads the provenance log to populate overlay `selection` and `built_at` fields.
+- During `forked build`, we append provenance to `.forked/logs/forked-build.log` including timestamp, trunk SHA, selected patches, features, resolver metadata, commit ranges per patch, and skip counts. We also write optional notes to `refs/notes/forked-meta` for the overlay tip (`patches:...;features:...`). Guard prefers log/notes metadata before recomputing selections so reports include `report.features`.
+- `forked status --json` reads the provenance log to populate overlay `selection` and `built_at` fields, grabs `both_touched_count` from the latest guard report when available, otherwise emits `null` and issues a warning (while marking `selection.source = "derived"`).
 
 Acceptance criteria: the JSON output feeds direct consumption by dashboards; guard and status share provenance utilities; documentation updates show combined usage with `jq`.
 
@@ -125,11 +125,11 @@ forked clean [--dry-run] [--keep N] [--overlays <age|pattern>] [--worktrees] [--
 
 Design notes:
 
-- **Dry-run first**: without `--confirm`, the command prints a summary plus exact Git operations (deleting branches, removing directories). Users must either pass `--confirm` or re-run without `--dry-run` to execute actions.
+- **Dry-run first**: without `--confirm`, the command prints a summary plus exact Git operations (deleting branches, removing directories) and exits 0 with a reminder that nothing was executed; users must re-run with `--no-dry-run --confirm` to execute actions.
 - **Worktrees**: `--worktrees` applies `git worktree prune` and removes directories under `.forked/worktrees/*` that no longer map to live overlays or protected entries. We never touch worktrees referenced by the current overlay or listed in `forked.yml` overrides.
-- **Overlays**: `--overlays 30d` deletes overlay branches older than 30 days that are not tagged and not the configured default overlay; glob patterns (e.g. `--overlays 'overlay/tmp-*'`) remove matches. `--keep N` preserves the N most recent overlays regardless of age/pattern.
-- **Conflicts**: `--conflicts` clears `.forked/conflicts/*` directories older than 14 days, retaining the latest bundle per overlay id for auditability.
-- **Safety**: Tagged overlays and those referenced in provenance logs within the keep window are skipped automatically.
+- **Overlays**: `--overlays 30d` deletes overlay branches older than 30 days that are not tagged and not the configured default overlay; glob patterns (e.g. `--overlays 'overlay/tmp-*'`) remove matches. `--keep N` preserves the N most recent overlays regardless of age/pattern. Overlays referenced in provenance logs within the keep window are protected automatically.
+- **Conflicts**: `--conflicts` clears `.forked/conflicts/*` directories older than 14 days (removing JSON + blob subdirectories), retaining the latest bundle per overlay id for auditability.
+- **Safety**: Tagged overlays, the configured default overlay, and those referenced in provenance logs within the keep window are skipped automatically; executed actions are appended to `.forked/logs/clean.log` for audit.
 
 Acceptance criteria: dry-run output mirrors execution, installing guardrails against accidental destructive operations, and documentation clarifies recommended cadence (post-release or weekly).
 
@@ -156,7 +156,7 @@ policy_overrides:
   allowed_values: ["size","sentinel","both_touched","all"]
 ```
 
-When violations occur in `require-override` mode, the CLI searches for override markers in this order: overlay tip commit trailers, annotated tag message trailers (when publishing), and `git notes --ref=refs/notes/forked/override`. Trailers may list comma- or space-separated scopes (`Forked-Override: sentinel, size`). If no override is found the run exits **2**; if scopes are present and allowed it exits **0** and records `override.applied=true`; disallowed scopes keep the failure. Guard increments `report_version` to `2`, adding an `override` block to `.forked/report.json`:
+When violations occur in `require-override` mode, the CLI searches for override markers in this order: overlay tip commit trailers, annotated tag message trailers (when publishing), and `git notes --ref=refs/notes/forked/override`. The first matching source wins and later sources are ignored. Trailers may list comma- or space-separated scopes (`Forked-Override: sentinel, size`). If no override is found the run exits **2**; if scopes are present and allowed it exits **0** and records `override.applied=true`; disallowed scopes keep the failure. Guard increments `report_version` to `2`, adding an `override` block to `.forked/report.json`:
 
 ```json
 {

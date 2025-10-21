@@ -18,10 +18,10 @@ forked clean --dry-run --overlays 30d --keep 2 --worktrees --conflicts
 ## Confirmed Cleanup
 ```bash
 # remove tmp overlays matching pattern after review
-forked clean --overlays 'overlay/tmp-*' --confirm
+forked clean --overlays 'overlay/tmp-*' --no-dry-run --confirm
 
 # prune worktrees only
-forked clean --worktrees --confirm
+forked clean --worktrees --no-dry-run --confirm
 ```
 
 ## Tests

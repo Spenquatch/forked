@@ -17,14 +17,14 @@ tags: [implementation, plan]
 1. **Schema Writer**
    - [ ] Add `--json` flag, defaulting to human-readable output when absent.
    - [ ] Emit upstream/trunk fields (remote, branch, SHAs).
-   - [ ] List patches with `ahead/behind` counts (skip gracefully on errors).
+   - [ ] List patches with `ahead/behind` counts (skip gracefully on errors and log at DEBUG).
 2. **Overlay Metadata**
    - [ ] Extend build workflow to log selection metadata (`.forked/logs/forked-build.log`) and optional Git notes.
-   - [ ] Read provenance to populate overlay `selection`, `built_at`, and `both_touched_count`.
-   - [ ] Implement `--latest N` overlay window (default 5).
+   - [ ] Read provenance to populate overlay `selection`, `built_at` (ISO 8601 UTC), and `both_touched_count` (from latest guard report when available, otherwise `null`).
+   - [ ] Implement `--latest N` overlay window (default 5) and mark `selection.source` as `"provenance"` or `"derived"` when falling back.
 3. **Validation & Docs**
-   - [ ] Add unit/integration tests covering empty overlays, single overlay, multi overlay pagination.
-   - [ ] Document JSON schema and sample `jq` usage in README + handbook.
+   - [ ] Add unit/integration tests covering empty overlays, pagination, provenance fallback, and guard-report-driven counts.
+   - [ ] Document JSON schema, fallback behaviour, and sample `jq` usage in README + handbook.
 
 ## Validation
 - `pytest tests/test_status_json.py -q`

@@ -9,8 +9,7 @@ depends_on: [TASK-003, TASK-004, TASK-006, TASK-007, TASK-008]
 prio: P1
 due: 2025-10-24
 acceptance:
-  - README documents feature slices, overlay profiles, and conflict bundle usage with examples.
-  - README/handbook include new sections for policy overrides, `forked status --json`, `forked clean`, `--skip-upstream-equivalents`, and sync auto-continue guidance.
+  - README documents feature slices/overlay profiles, conflict bundle schema v2, policy overrides (`mode=require-override`), `forked status --json`, `forked clean`, `--skip-upstream-equivalents`, and sync auto-continue guidance (with section anchors/TOC updates).
   - Release changelog (`project-handbook/releases/CHANGELOG.md`) updated with v1.1.0 highlights.
   - Handbook feature pages linked from status/roadmap and validated via `make validate`.
 links:

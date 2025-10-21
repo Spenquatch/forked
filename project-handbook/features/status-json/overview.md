@@ -13,7 +13,7 @@ capacity_impact: planned
 # Status JSON
 
 Purpose
-- Provide a machine-readable `forked status --json` output capturing upstream/trunk info, patch drift (`ahead/behind`), and recent overlay selections (features, patches, build timestamps).
+- Provide a machine-readable `forked status --json` output capturing upstream/trunk info, patch drift (`ahead/behind`), recent overlay selections (features, patches, build timestamps, skip counts), and guard-derived both_touched metrics.
 - Feed dashboards, guard provenance, and CI workflows with stable schema (`status_version: 1`).
 
 Outcomes

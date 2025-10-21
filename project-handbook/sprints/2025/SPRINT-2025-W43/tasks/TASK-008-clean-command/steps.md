@@ -15,14 +15,14 @@ links: []
 - [ ] Identify conflict bundle directories with timestamps (default prune threshold 14d).
 
 ## Step 2: Dry-Run Renderer
-- [ ] Implement dry-run summary grouped by worktrees/overlays/conflicts.
+- [ ] Implement dry-run summary grouped by worktrees/overlays/conflicts (dry-run enabled by default).
 - [ ] Print exact commands to be executed (e.g., `git branch -D ...`, `rm -rf ...`).
-- [ ] Exit non-zero (or emit warning) when run without `--confirm` to remind operators nothing was deleted.
+- [ ] Emit clear message when destructive actions skipped because `--confirm` absent (exit code remains 0).
 
 ## Step 3: Execution Path
-- [ ] Gate destructive actions behind `--confirm` (or re-run without `--dry-run`).
+- [ ] Gate destructive actions behind `--confirm` (command must be invoked without `--dry-run` and with `--confirm`).
 - [ ] Apply `--keep N`, `--overlays <age|pattern>`, `--worktrees`, `--conflicts` options.
-- [ ] Ensure tagged overlays, current overlay, and recently-built overlays (per provenance) cannot be deleted.
+- [ ] Match overlays to provenance (branch name + latest build log entry) to protect recently-built overlays and the configured default; skip tagged overlays.
 
 ## Step 4: Tests & Docs
 - [ ] Add unit/integration tests simulating stale worktrees and overlays.

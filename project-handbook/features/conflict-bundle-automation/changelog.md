@@ -8,8 +8,12 @@ tags: [changelog]
 
 # Changelog
 
+## 2025-10-21
+- Implemented schema v2 conflict bundles for both `forked build` and `forked sync`, including binary detection, multi-wave numbering, and blob exports.
+- Added `--emit-conflicts`, `--conflict-blobs-dir`, `--on-conflict`, and `--on-conflict-exec` options; preserved `--auto-continue` as a bias alias.
+- Standardised exit code `10` for unresolved conflicts and logged wave metadata to `.forked/logs/forked-build.log`.
+- Updated README with bundle schema summary, CI usage example, and usage docs; added regression tests covering build + sync flows.
+
 ## Planned
-- Add shared conflict bundle writer with schema v2 (wave numbering, binary metadata) and blob exports.
-- Introduce `--emit-conflicts`, `--conflict-blobs-dir`, `--on-conflict=<mode|exec>`, and sync `--auto-continue` options to build + sync.
-- Emit exit code `10` when conflicts are captured (bias/exec overrides supported) and log provenance entries per wave.
-- Document bundle structure, examples, CI snippets, and Windows POSIX shell note in README.
+- Collect real-world feedback on bundle consumers (bots/CI) and iterate on schema extensions if needed.
+- Explore PowerShell-friendly command snippets for Windows-first teams.

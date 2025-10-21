@@ -9,15 +9,14 @@ tags: [testing]
 # Testing Guide
 
 ## Automated
-- `pytest tests/test_status_json.py -q` – unit tests for schema structure and ahead/behind calculations.
-- `pytest tests/test_provenance_integration.py -q` – ensures overlay selection metadata is sourced from logs/notes.
+- `pytest tests/test_status_json.py -q`
+- `pytest tests/test_provenance_integration.py -q`
 
 ## Manual
-1. `forked build --overlay dev --id dev-test` (ensure provenance logged).
-2. `forked status --json | jq '.overlays[0]'` – verify `selection.features`, `patches`, `built_at`.
-3. `forked status --json --latest 1` – confirm pagination.
-4. Delete provenance entry and re-run to observe fallback behaviour/warning.
+1. `forked status --json | jq` → confirm `status_version: 1`, `selection.source` set to `"provenance"` when log present.
+2. `forked status --json --latest 2 | jq '.overlays'` → verify pagination and ISO `built_at` timestamps.
+3. Run build without guard, inspect JSON (`both_touched_count: null`). Then run guard, rerun status to ensure count populated from report.
+4. Remove provenance entry, rerun status: expect warning and `selection.source == "derived"`.
 
 ## Regression
-- Run `make validate` to ensure documentation references remain intact.
-- Guard pipeline should show `report.features` populated from status provenance.
+- Ensure README/handbook schema snippets stay in sync with CLI output.
