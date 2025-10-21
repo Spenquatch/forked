@@ -6,21 +6,23 @@ import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
+
 import typer
 from pathspec import PathSpec
-from .config import Config
+
 from . import gitutil as g
+from .config import Config
 from .conflicts import ConflictContext, apply_recommendations, create_conflict_writer
 from .resolver import ResolvedSelection
 
 
-def _conflict_paths(cwd: Optional[str] = None) -> list[str]:
+def _conflict_paths(cwd: str | None = None) -> list[str]:
     out = g.run(["status", "--porcelain"], cwd=cwd).stdout.splitlines()
     return [line.split()[-1] for line in out if line.startswith(("U", "AA", "DD", "DU", "UD"))]
 
 
-def _apply_path_bias(cfg: Config, cwd: Optional[str] = None) -> bool:
+def _apply_path_bias(cfg: Config, cwd: str | None = None) -> bool:
     ours = PathSpec.from_lines("gitwildmatch", cfg.path_bias.ours or [])
     theirs = PathSpec.from_lines("gitwildmatch", cfg.path_bias.theirs or [])
     conflicted = _conflict_paths(cwd)
@@ -85,12 +87,12 @@ def _resolve_worktree_dir(cfg: Config, overlay_id: str) -> Path:
     return target
 
 
-def _rev_list_range(base: str, tip: str) -> List[str]:
+def _rev_list_range(base: str, tip: str) -> list[str]:
     revs = g.run(["rev-list", "--reverse", f"{base}..{tip}"]).stdout.splitlines()
     return [rev for rev in revs if rev]
 
 
-def _upstream_equivalent_commits(trunk: str, branch: str) -> Set[str]:
+def _upstream_equivalent_commits(trunk: str, branch: str) -> set[str]:
     """Return commit SHAs already contained in the trunk branch."""
     cp = g.run(["cherry", trunk, branch], check=False)
     if cp.returncode != 0:
@@ -99,7 +101,7 @@ def _upstream_equivalent_commits(trunk: str, branch: str) -> Set[str]:
             err=True,
         )
         return set()
-    skip: Set[str] = set()
+    skip: set[str] = set()
     for line in cp.stdout.splitlines():
         if not line.startswith("- "):
             continue
@@ -112,17 +114,17 @@ def _upstream_equivalent_commits(trunk: str, branch: str) -> Set[str]:
 def build_overlay(
     cfg: Config,
     overlay_id: str,
-    selection: Optional[ResolvedSelection] = None,
+    selection: ResolvedSelection | None = None,
     *,
     use_worktree: bool = True,
     auto_continue: bool = False,
     skip_upstream_equivalents: bool = False,
     write_git_note: bool = True,
-    emit_conflicts: Optional[str] = None,
-    conflict_blobs_dir: Optional[str] = None,
+    emit_conflicts: str | None = None,
+    conflict_blobs_dir: str | None = None,
     on_conflict: str = "stop",
-    on_conflict_exec: Optional[str] = None,
-) -> Tuple[str, Path, Dict[str, Any]]:
+    on_conflict_exec: str | None = None,
+) -> tuple[str, Path, dict[str, Any]]:
     conflict_mode = (on_conflict or "stop").lower()
     if conflict_mode not in {"stop", "bias", "exec"}:
         raise typer.BadParameter(f"Unsupported --on-conflict mode '{on_conflict}'.")
@@ -160,7 +162,7 @@ def build_overlay(
         )
 
     overlay = f"{cfg.branches.overlay_prefix}{overlay_id}"
-    wt_existing: Optional[Path] = None
+    wt_existing: Path | None = None
     if use_worktree and cfg.worktree.enabled:
         wt_existing = g.worktree_for_branch(overlay)
         if wt_existing and not wt_existing.exists():
@@ -202,7 +204,7 @@ def build_overlay(
             return "'" + value.replace("'", "'\"'\"'") + "'"
         return value
 
-    rebuild_tokens: List[str] = ["forked", "build", "--id", overlay_id]
+    rebuild_tokens: list[str] = ["forked", "build", "--id", overlay_id]
     if selection.overlay_profile:
         rebuild_tokens.extend(["--overlay", selection.overlay_profile])
     elif selection.active_features:
@@ -218,11 +220,11 @@ def build_overlay(
 
     logs_dir = repo / ".forked" / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
-    patch_summaries: List[dict] = []
-    conflict_records: List[Dict[str, Any]] = []
-    bias_logs: List[Dict[str, Any]] = []
+    patch_summaries: list[dict] = []
+    conflict_records: list[dict[str, Any]] = []
+    bias_logs: list[dict[str, Any]] = []
 
-    def log_build(status: str) -> Dict[str, Any]:
+    def log_build(status: str) -> dict[str, Any]:
         telemetry = {
             "event": "forked.build",
             "status": status,
@@ -263,7 +265,7 @@ def build_overlay(
             patch_summaries.append(summary_entry)
             continue
 
-        skip_shas: Set[str] = set()
+        skip_shas: set[str] = set()
         if skip_upstream_equivalents:
             skip_shas = _upstream_equivalent_commits(cfg.branches.trunk, branch)
 
@@ -339,7 +341,9 @@ def build_overlay(
                 if conflict_mode == "bias":
                     actions = apply_recommendations(bundle, cwd)
                     if actions:
-                        action_records = [{"path": path, "resolution": choice} for path, choice in actions]
+                        action_records = [
+                            {"path": path, "resolution": choice} for path, choice in actions
+                        ]
                         record["auto_actions"] = action_records
                         bias_logs.append({"bundle": str(bundle_path), "actions": action_records})
                     cont = g.run(["cherry-pick", "--continue"], cwd=cwd, check=False)

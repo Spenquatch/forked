@@ -2,10 +2,9 @@
 
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, List
+
 import typer
 import yaml
-
 
 DEFAULT_CFG_PATH = Path("forked.yml")
 
@@ -24,7 +23,7 @@ class Branches:
 
 @dataclass
 class Patches:
-    order: List[str] = field(default_factory=list)
+    order: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -35,8 +34,8 @@ class SizeCaps:
 
 @dataclass
 class Sentinels:
-    must_match_upstream: List[str] = field(default_factory=list)
-    must_diverge_from_upstream: List[str] = field(default_factory=list)
+    must_match_upstream: list[str] = field(default_factory=list)
+    must_diverge_from_upstream: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -49,8 +48,8 @@ class Guards:
 
 @dataclass
 class PathBias:
-    ours: List[str] = field(default_factory=list)
-    theirs: List[str] = field(default_factory=list)
+    ours: list[str] = field(default_factory=list)
+    theirs: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -63,7 +62,7 @@ class WorktreeCfg:
 class PolicyOverrides:
     require_trailer: bool = False
     trailer_key: str = "Forked-Override"
-    allowed_values: List[str] = field(default_factory=list)
+    allowed_values: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -76,19 +75,19 @@ class Config:
     path_bias: PathBias = field(default_factory=PathBias)
     worktree: WorktreeCfg = field(default_factory=WorktreeCfg)
     policy_overrides: PolicyOverrides = field(default_factory=PolicyOverrides)
-    features: Dict[str, "Feature"] = field(default_factory=dict)
-    overlays: Dict[str, "OverlayProfile"] = field(default_factory=dict)
+    features: dict[str, "Feature"] = field(default_factory=dict)
+    overlays: dict[str, "OverlayProfile"] = field(default_factory=dict)
 
 
 @dataclass
 class Feature:
-    patches: List[str] = field(default_factory=list)
+    patches: list[str] = field(default_factory=list)
     sentinels: Sentinels = field(default_factory=Sentinels)
 
 
 @dataclass
 class OverlayProfile:
-    features: List[str] = field(default_factory=list)
+    features: list[str] = field(default_factory=list)
 
 
 def load_config(path: Path = DEFAULT_CFG_PATH) -> Config:
@@ -120,7 +119,7 @@ def load_config(path: Path = DEFAULT_CFG_PATH) -> Config:
     policy_overrides = PolicyOverrides(**data.get("policy_overrides", {}))
 
     features_raw = data.get("features", {}) or {}
-    features: Dict[str, Feature] = {}
+    features: dict[str, Feature] = {}
     for name, payload in features_raw.items():
         if not isinstance(payload, dict):
             continue
@@ -131,13 +130,11 @@ def load_config(path: Path = DEFAULT_CFG_PATH) -> Config:
         )
 
     overlays_raw = data.get("overlays", {}) or {}
-    overlays: Dict[str, OverlayProfile] = {}
+    overlays: dict[str, OverlayProfile] = {}
     for name, payload in overlays_raw.items():
         if not isinstance(payload, dict):
             continue
-        overlays[name] = OverlayProfile(
-            features=list(payload.get("features", []) or [])
-        )
+        overlays[name] = OverlayProfile(features=list(payload.get("features", []) or []))
 
     return Config(
         upstream=upstream,

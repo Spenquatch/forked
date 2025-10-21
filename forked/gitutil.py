@@ -1,12 +1,12 @@
 """Lightweight Git helpers for Forked CLI."""
 
-from pathlib import Path
 import subprocess as sp
-from typing import List, Optional
+from pathlib import Path
+
 import typer
 
 
-def run(args: List[str], cwd: Optional[str] = None, check: bool = True) -> sp.CompletedProcess:
+def run(args: list[str], cwd: str | None = None, check: bool = True) -> sp.CompletedProcess:
     """Run a git command and return the completed process."""
     return sp.run(
         ["git", *args],
@@ -68,7 +68,7 @@ def changed_paths(a: str, b: str) -> list[str]:
     return sorted(p for p in out.splitlines() if p)
 
 
-def blob_hash(ref: str, path: str) -> Optional[str]:
+def blob_hash(ref: str, path: str) -> str | None:
     """Return the blob hash for ``path`` at ``ref`` (or None if absent)."""
     cp = run(["ls-tree", ref, "--", path], check=False)
     if cp.returncode != 0 or not cp.stdout.strip():
@@ -87,7 +87,7 @@ def repo_root() -> Path:
     return Path(run(["rev-parse", "--show-toplevel"]).stdout.strip())
 
 
-def worktree_for_branch(branch: str) -> Optional[Path]:
+def worktree_for_branch(branch: str) -> Path | None:
     """Return the path of an existing worktree that has ``branch`` checked out."""
     out = run(["worktree", "list", "--porcelain"]).stdout.splitlines()
     cur_path = None

@@ -1,9 +1,11 @@
 """Guard checks for Forked CLI overlays."""
 
-from typing import Any, Dict, Tuple
+from typing import Any
+
 from pathspec import PathSpec
-from .config import Config
+
 from . import gitutil as g
+from .config import Config
 
 
 def _make_spec(globs: list[str]) -> PathSpec:
@@ -22,7 +24,7 @@ def sentinels(
     trunk: str,
     overlay: str,
     return_debug: bool = False,
-) -> Tuple[Dict[str, list[str]], Dict[str, list[str]]]:
+) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
     """Evaluate sentinel rules across trunk and overlay."""
     must_match_spec = _make_spec(cfg.guards.sentinels.must_match_upstream)
     must_diverge_spec = _make_spec(cfg.guards.sentinels.must_diverge_from_upstream)
@@ -61,7 +63,7 @@ def sentinels(
     return result, debug
 
 
-def size_caps(cfg: Config, overlay: str, trunk: str) -> Dict[str, Any]:
+def size_caps(cfg: Config, overlay: str, trunk: str) -> dict[str, Any]:
     """Compute diff size metrics and indicate violations."""
     caps = cfg.guards.size_caps
     if not (caps.max_loc or caps.max_files):
@@ -82,7 +84,6 @@ def size_caps(cfg: Config, overlay: str, trunk: str) -> Dict[str, Any]:
             loc += int(dele)
 
     violated = bool(
-        (caps.max_files and files > caps.max_files)
-        or (caps.max_loc and loc > caps.max_loc)
+        (caps.max_files and files > caps.max_files) or (caps.max_loc and loc > caps.max_loc)
     )
     return {"files_changed": files, "loc": loc, "violations": violated}
