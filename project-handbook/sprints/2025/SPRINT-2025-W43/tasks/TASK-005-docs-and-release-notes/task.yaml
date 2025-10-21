@@ -3,7 +3,7 @@ title: Docs & Release Notes Refresh
 feature: release-operations
 decision: ADR-0003
 owner: @ai-agent
-status: review
+status: done
 story_points: 1
 depends_on: [TASK-003, TASK-004, TASK-006, TASK-007, TASK-008]
 prio: P1
