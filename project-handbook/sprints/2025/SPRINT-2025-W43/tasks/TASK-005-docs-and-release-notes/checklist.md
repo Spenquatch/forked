@@ -9,8 +9,8 @@ links: []
 
 # Completion Checklist
 
-- [ ] README documents feature selection flags, feature commands, and conflict bundles.
-- [ ] Changelog entry for v1.1.0 finalized with accurate bullets.
-- [ ] Handbook links referencing new features verified.
-- [ ] `make validate` passes without warnings.
-- [ ] Release notes summary captured in sprint demo notes/daily status.
+- [x] README documents feature selection flags, feature commands, and conflict bundles.
+- [x] Changelog entry for v1.1.0 finalized with accurate bullets.
+- [x] Handbook links referencing new features verified.
+- [x] `make validate` passes without warnings.
+- [x] Release notes summary captured in sprint demo notes/daily status.

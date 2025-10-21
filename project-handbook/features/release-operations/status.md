@@ -9,11 +9,11 @@ tags: [status]
 # Status: Release Operations
 
 ## Summary
-Release operations documentation has structure (architecture + validation guides), but README, release notes, and automation instructions still need aligned updates before tagging v1.0.0. Success is dependent on completing [ADR-0001](../../adr/0001-overlay-worktree-contract.md) and [ADR-0002](../../adr/0002-guard-cli-contract.md).
+Release operations documentation is now aligned with the v1.1.0 feature set: README sections cover feature slices, conflict bundles, overrides, status JSON, and the clean workflow; release notes and changelog capture the full milestone.
 
 ## Milestones
-- [ ] Enhance README smoke & release checklists with concrete commands and outputs
-- [ ] Sync release plan/notes with overlay + guard deliverables
+- [x] Enhance README smoke & release checklists with concrete commands and outputs
+- [x] Sync release plan/notes with overlay + guard deliverables
 - [ ] Validate CI workflow (editable install + smoke guard run) and document usage
 - [ ] Prepare communications template and backlog follow-up for post-release improvements
 

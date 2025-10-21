@@ -451,8 +451,8 @@ Example (trimmed):
 
 ```json
 {
-  "report_version": 1,
-  "overlay": "overlay/test",
+  "report_version": 2,
+  "overlay": "overlay/dev",
   "trunk": "trunk",
   "base": "6c535ebe766748006eea7f5fc21d0eaa2bcf01a2",
   "violations": {
@@ -466,11 +466,25 @@ Example (trimmed):
     "files_changed": 3,
     "loc": 42,
     "violations": true
+  },
+  "override": {
+    "enabled": true,
+    "source": "commit",
+    "values": ["sentinel"],
+    "applied": true,
+    "allowed_values": ["sentinel", "size", "both_touched", "all"]
+  },
+  "features": {
+    "source": "provenance-log",
+    "values": ["contract_update"],
+    "patches": ["patch/contract-update"]
   }
 }
 ```
 
-Downstream tooling (CI, bots) can parse `violations` to fail builds or surface guidance. The `report_version` field allows the format to evolve while preserving backwards compatibility.
+Guard checks in `mode=require-override` look for the configured trailer key (default `Forked-Override`) on the overlay tip commit, then annotated tags, then `refs/notes/forked/override`. The `override` block records which source supplied the escalation marker and whether it satisfied the active violations (or the special value `all`). The `features` block carries the provenance list harvested from build logs/notes so downstream tooling knows which slices were active.
+
+Downstream tooling (CI, bots) can parse `violations` and `override` to fail builds or surface escalation guidance. The `report_version` field allows the format to evolve while preserving backwards compatibility.
 
 ---
 
