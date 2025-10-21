@@ -3,9 +3,8 @@
 .forked/
 demo-*/
 .venv/
-forked/conflicts.py
-forked/resolver.py
-forked/sync.py
 demo-feature-run-origin.git/
 demo-feature-run-upstream.git/
 demo-feature-run/
+dist/
+.pypi_token

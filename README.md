@@ -623,6 +623,24 @@ poetry run make -C project-handbook help
 > Tip: `poetry shell` drops you into the virtualenv; otherwise prefix commands
 > with `poetry run` (for example `poetry run forked status --json`).
 
+### Publishing to PyPI
+
+```bash
+# 1. Update version in pyproject.toml (PEP 440 format)
+# 2. Verify packaging artefacts locally
+poetry build
+# 3. Publish using an API token (set POETRY_PYPI_TOKEN_PYPI beforehand)
+poetry publish --build
+```
+
+The build step produces `dist/forked_cli-<version>.whl` and `.tar.gz`. Inspect the wheel (`unzip -l dist/*.whl`) if you need to confirm module contents before publishing.
+
+#### GitHub Actions Release
+
+- Push a tag matching `v*` (e.g., `v0.2.0`) to trigger `.github/workflows/publish.yml`.
+- Store your PyPI token as `PYPI_API_TOKEN` in the repository secrets.
+- The workflow runs Ruff, mypy, pytest, builds the artefacts via Poetry, and publishes with `pypa/gh-action-pypi-publish`.
+
 Key handbook commands:
 
 - `make task-list` – show current sprint tasks (`project-handbook/Makefile`).

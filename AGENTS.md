@@ -1,35 +1,39 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `README.md` — product spec and operational context for the Forked CLI MVP.
-- `src/` — runtime Python modules (installed layout mirrors production).
-- `legacy-handbook/` — sprint-based project handbook (features, releases, sprints, backlog, docs, automation).
-  - `features/` tracks overlay, guard, and release initiatives.
-  - `releases/v1.0.0/` captures the current Forked CLI delivery plan.
-  - `process/automation/` houses Python scripts invoked via `make`.
-- `legacy-handbook/status/` and `status/daily/` store generated dashboards; treat them as build artifacts.
+- `src/` – CLI source modules (`cli.py`, `build.py`, `config.py`, etc.).
+- `tests/` – Pytest suite covering CLI flows, conflict bundles, guards, and provenance.
+- `project-handbook/` – Sprint assets, ADRs, and automation (run `make -C project-handbook …`).
+- `scripts/` – Developer utilities (e.g., `setup-demo-repo.sh` for sandbox repos).
+- Runtime artefacts live under `.forked/` (logs, worktrees, guard reports) and are gitignored.
 
 ## Build, Test, and Development Commands
-Run all commands from `legacy-handbook/` unless noted.
-- `make help` – list available handbook automation targets.
-- `make daily` – generate the Day N status file (skips weekends automatically).
-- `make sprint-status` – show sprint health indicators (🟢/🟡/🔴).
-- `make feature-update-status` – refresh feature status files from sprint data.
-- `make validate` – run all handbook validators (links, schemas, front matter).
-- `make road​map` / `make release-status` – inspect roadmap and release progress.
+- `poetry install --with dev` – Sync dependencies inside the virtualenv.
+- `python -m pip install -e .` – Editable install for invoking the global `forked` CLI.
+- `poetry run ruff check .` / `poetry run ruff format --check .` – Lint and formatting audits.
+- `poetry run mypy` – Type-check the entire `src/` tree (untyped defs included).
+- `poetry run pytest` – Execute the full test suite.
+- `poetry build` / `poetry publish --build` – Produce and ship PyPI artefacts (set `POETRY_PYPI_TOKEN_PYPI`).
+- `poetry run make -C project-handbook help` – Discover handbook automation (dashboards, status, etc.).
+- GitHub Actions publishes automatically on `v*` tags using `.github/workflows/publish.yml`; add `PYPI_API_TOKEN` to repo secrets first.
 
 ## Coding Style & Naming Conventions
-- Markdown and YAML are the primary authoring formats; keep front matter fields in lowercase snake_case (e.g., `start_sprint`).
-- Commit-created files follow kebab-case (`overlay-infrastructure/`), while automation-generated IDs use pattern `TASK-###-slug`.
-- Python automation scripts target 4-space indentation and PEP 8 naming (`snake_case` for functions, `CapWords` for classes).
+- Python 3.10+, 4-space indentation, 100-character line limit (enforced by Ruff).
+- Prefer type hints; mypy runs with `check_untyped_defs`.
+- Modules live flat under `src/`; avoid implicit packages or relative path hacks.
+- Use descriptive snake_case for variables/functions, CapWords for classes.
 
 ## Testing Guidelines
-- Validation is performed through `make validate`; no separate unit test suite ships with the handbook.
-- Before publishing status artifacts, run both `make validate` and `make status` to ensure generated JSON/Markdown remain consistent.
-- Avoid manual edits inside `status/` or `releases/*/progress.md`; regenerate via the corresponding make targets if changes are required.
+- Write Pytest tests under `tests/`, mirroring module names (e.g., `test_status_json.py` for `cli.status`).
+- Keep fixtures in `tests/conftest.py`; reuse the sandbox git repo helper when possible.
+- Validate changes with `poetry run pytest` plus targeted commands (e.g., `pytest tests/test_guard_report_v2.py -q`).
 
 ## Commit & Pull Request Guidelines
-- Use imperative, descriptive commit summaries (e.g., `feat: harden overlay rebuild`).
-- Reference relevant tasks or ADRs when applicable (`Refs: #TASK-001`, `ADR-0001`).
-- Pull requests should include: purpose summary, affected directories, validation commands executed (e.g., `make validate`), and links to sprint tasks or release goals.
-- Provide screenshots or diff excerpts when updating dashboards or generated artifacts to highlight the delta.
+- Commit messages: imperative present tense (`feat: add status json flag`).
+- Reference related work items or ADRs when applicable (`Refs: TASK-007`, `ADR-0004`).
+- Pull requests should summarize purpose, list affected directories, and note validation commands executed.
+- Include screenshots or JSON snippets when modifying `.forked/` outputs or handbook dashboards.
+
+## Agent-Specific Tips
+- Regenerate demo repos via `./scripts/setup-demo-repo.sh demo-forked` before sanity runs.
+- Never edit generated artefacts (`.forked/**`, `status/daily/**`) manually—use the corresponding CLI or Make targets.
