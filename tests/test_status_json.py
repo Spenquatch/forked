@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 from cli import app
 from config import Feature, load_config, write_config, write_skeleton
 
-runner = CliRunner(mix_stderr=False)
+runner = CliRunner()
 
 
 def _prepare_status_repo(git_repo):

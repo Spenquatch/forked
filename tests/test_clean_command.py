@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 from cli import app
 from config import load_config, write_config, write_skeleton
 
-runner = CliRunner(mix_stderr=False)
+runner = CliRunner()
 
 
 def _configure_repo(git_repo, monkeypatch):
