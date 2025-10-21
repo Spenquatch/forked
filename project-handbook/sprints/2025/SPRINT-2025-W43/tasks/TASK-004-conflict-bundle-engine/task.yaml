@@ -3,7 +3,7 @@ title: Conflict Bundle Engine
 feature: conflict-bundle-automation
 decision: ADR-0004
 owner: @ai-agent
-status: review
+status: done
 story_points: 3
 depends_on: [TASK-003]
 prio: P0

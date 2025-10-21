@@ -97,6 +97,46 @@ forked guard --overlay overlay/smoke --mode block
 forked sync
 ```
 
+## Feature-Sliced Overlays
+
+1. **Define features and overlays** in `forked.yml` using the new `features` and `overlays` sections. Each feature lists the patch branches (slices) that compose it, and overlays map profile names to feature sets. Example:
+
+   ```yaml
+   features:
+     payments_v2:
+       patches:
+         - patch/payments_v2/01-schema
+         - patch/payments_v2/02-api
+   overlays:
+     dev:
+       features: [payments_v2, branding]
+   ```
+
+2. **Scaffold feature slices** with the CLI:
+
+   ```bash
+   forked feature create payments_v2 --slices 3
+   forked feature status         # shows ahead/behind vs trunk
+   ```
+
+3. **Build overlays by profile or feature lists**:
+
+   ```bash
+   # Profile-driven build (overlay/dev)
+   forked build --overlay dev --skip-upstream-equivalents
+
+   # Ad-hoc feature combination with include/exclude globs
+   forked build --features payments_v2,branding \
+     --include patch/branding/experimental \
+     --exclude patch/branding/old
+   ```
+
+   The resolver preserves global patch order, surfaces unmatched patterns, and logs provenance (features, patches, and filters) to `.forked/logs/forked-build.log` and optional git notes on the overlay tip.
+
+4. **Optimise repeat builds** with `--skip-upstream-equivalents` (filters commits that already exist on trunk via `git cherry`).
+
+5. **Automate overlays safely** using the new selection metadata in git notes and build logs—these record the active feature set so guard/status tooling and downstream bots can reason about provenance.
+
 The key artefacts after a build/guard cycle:
 
 - `.forked/worktrees/<id>/` – the reuseable overlay worktree.

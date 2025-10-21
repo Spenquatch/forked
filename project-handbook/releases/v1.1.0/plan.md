@@ -57,8 +57,7 @@ Deliver feature-sliced workflows, guard policy overrides, conflict bundle automa
 - Overrides must always default-safe (require explicit trailers when enabled).
 
 ## Release Notes Draft
-- `forked build` gains feature/profile selection (`--overlay`, `--features`, include/exclude globs) plus optional `--skip-upstream-equivalents`.
-- New `forked feature create/status` commands scaffold and inspect feature slices; `forked status --json` exposes machine-readable dashboards.
-- `forked build` and `forked sync` output conflict bundles (`--emit-conflicts`) with schema v2 (binary handling, multi-wave, POSIX command notes).
-- Guard reports annotate violations by feature, enforce policy overrides, and set `"report_version": 2`.
-- `forked clean` removes stale worktrees/overlays/conflicts with dry-run + confirm workflow.
+- Feature-sliced overlays: `forked build --overlay/--features`, include/exclude globs, skip-upstream optimisation, provenance logging in build logs + git notes, and new `forked feature create/status` commands.
+- Conflict bundle engine v2 across build + sync with `--emit-conflicts`, `--conflict-blobs-dir`, `--on-conflict <stop|bias|exec>`, binary-aware diffs, multi-wave numbering, and deterministic exit codes.
+- Guard overrides/report v2, status JSON, and clean command entries to be appended once corresponding tasks land.
+- Draft notes tracked in `releases/v1.1.0/release-notes-draft.md` (updated after each feature lands).
