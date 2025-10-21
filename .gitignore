@@ -2,6 +2,7 @@
 *.egg-info/
 .forked/
 demo-*/
+.venv/
 forked/conflicts.py
 forked/resolver.py
 forked/sync.py

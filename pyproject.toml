@@ -2,7 +2,9 @@
 name = "forked-cli"
 version = "0.1.0"
 description = "Git-native fork overlay & guard tool"
+readme = "README.md"
 requires-python = ">=3.10"
+authors = [{ name = "Spenquatch", email = "spmcconnell.totaltele@gmail.com" }]
 dependencies = [
     "typer>=0.12",
     "pyyaml>=6.0",
@@ -10,21 +12,19 @@ dependencies = [
     "pathspec>=0.12",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "ruff>=0.5",
-    "mypy>=1.10",
-]
-
 [project.scripts]
 forked = "forked.cli:app"
 
-[tool.setuptools.packages.find]
-where = ["."]
+[tool.poetry]
+packages = [{ include = "forked" }]
+
+[tool.poetry.group.dev.dependencies]
+ruff = ">=0.5"
+mypy = ">=1.10"
 
 [build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 100

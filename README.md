@@ -596,25 +596,24 @@ The script provisions:
 ## Development Workflow
 
 ```bash
-# install dependencies and editable CLI
-python -m pip install -e .
+# install runtime + dev dependencies inside a Poetry virtualenv
+poetry install --with dev
 
-# install development tooling (linting + type checking)
-python -m pip install -e ".[dev]"
+# lint & format with Ruff
+poetry run ruff check .
+poetry run ruff format --check .
+# apply formatting automatically when needed
+poetry run ruff format .
 
-# run Ruff (lint + format)
-ruff check .
-ruff format .
-
-# run mypy (type checking configuration lives in pyproject.toml)
-mypy --config-file pyproject.toml
+# run mypy (currently scoped to the CLI entrypoint)
+poetry run mypy --config-file pyproject.toml forked/cli.py
 
 # run project handbook automation (e.g., sprint dashboards)
-cd project-handbook
-make help
+poetry run make -C project-handbook help
 ```
 
-> **Note:** The initial mypy run surfaces outstanding type gaps across the CLI modules. The configuration is in place so we can ratchet coverage over time; fix the reported issues (or add targeted ignores) before treating the check as a gate in CI.
+> Tip: `poetry shell` drops you into the virtualenv; otherwise prefix commands
+> with `poetry run` (for example `poetry run forked status --json`).
 
 Key handbook commands:
 
