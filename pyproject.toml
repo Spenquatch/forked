@@ -51,3 +51,4 @@ files = ["src/forked"]
 strict = false
 ignore_missing_imports = true
 follow_imports = "skip"
+check_untyped_defs = true

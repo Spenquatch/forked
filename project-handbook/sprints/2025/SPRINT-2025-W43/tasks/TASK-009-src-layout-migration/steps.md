@@ -24,7 +24,7 @@ links: []
 - [ ] Ensure `PYTHONPATH` assumptions in make targets or scripts are removed/updated.
 
 ## Step 4: Tooling & Docs
-- [ ] Verify `poetry run ruff check .` and `poetry run mypy ...` still succeed after the move.
+- [ ] Verify `poetry run ruff check .` and `poetry run mypy` still succeed after the move.
 - [ ] Update README/development docs to mention the `src/` layout and any command changes.
 - [ ] Update sanity checklist if necessary (e.g., references to `src/forked/cli.py`).
 

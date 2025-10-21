@@ -613,8 +613,8 @@ poetry run ruff format --check .
 # apply formatting automatically when needed
 poetry run ruff format .
 
-# run mypy (currently scoped to the CLI entrypoint)
-poetry run mypy --config-file pyproject.toml src/forked/cli.py
+# run mypy (configured via pyproject.toml)
+poetry run mypy
 
 # run project handbook automation (e.g., sprint dashboards)
 poetry run make -C project-handbook help
