@@ -292,17 +292,54 @@ forked guard --overlay OVERLAY [--output PATH] [--mode MODE] [--verbose]
 - `--mode` – overrides `guards.mode` (`warn`, `block`, or `require-override`).
 - `--verbose` / `-v` – print sentinel matches and include extra debug data in the report/logs.
 
-The report contains:
+Policy overrides are configured in `forked.yml`:
+
+```yaml
+policy_overrides:
+  require_trailer: true
+  trailer_key: "Forked-Override"
+  allowed_values: ["sentinel","size","both_touched","all"]
+```
+
+When `guards.mode=require-override` (or `policy_overrides.require_trailer` is set), guard looks
+for override trailers in this order: overlay tip commit → annotated tag message → git note
+(`refs/notes/forked/override`). The first match wins; values can be comma- or space-delimited and
+are normalised to lowercase (`sentinel`, `size`, `both_touched`, or `all`). Overrides must cover
+every violation scope (or specify `all`) and respect `allowed_values`.
+
+The v2 report schema contains:
 
 - `both_touched` – files changed in both trunk and overlay since the merge base.
 - `sentinels.must_match_upstream` / `.must_diverge_from_upstream` – validation results for sentinel globs.
 - `size_caps` – diff size metrics via `git diff --numstat`.
 - `violations` – subset of the above that failed policy.
+- `override` – `{enabled, source, values, applied}` describing the override that was honoured (source `commit|tag|note|none`).
+- `features` – provenance-sourced feature list for the overlay (`source` reflects provenance log, git note, or resolver fallback).
+
+Example extract:
+
+```json
+{
+  "report_version": 2,
+  "violations": {"sentinels": {...}},
+  "override": {
+    "enabled": true,
+    "source": "commit",
+    "values": ["sentinel"],
+    "applied": true
+  },
+  "features": {
+    "source": "provenance-log",
+    "values": ["contract_update"],
+    "patches": ["patch/contract-update"]
+  }
+}
+```
 
 Exit codes:
 
-- `0` – pass (or violations in `warn` mode).
-- `2` – policy violations in `block`/`require-override` mode.
+- `0` – pass (or violations in `warn` mode, or `require-override` when a valid override is applied).
+- `2` – policy violations in `block`/`require-override` mode without a valid override.
 - `3` – configuration missing/invalid.
 - `4` – Git failure (dirty tree, missing remote, etc.).
 

@@ -3,7 +3,7 @@
 from datetime import date, datetime, timezone
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 import typer
 from rich import print as rprint
 from .config import Config, Feature, load_config, write_config, write_skeleton
@@ -223,6 +223,143 @@ def _derived_selection(cfg: Config, overlay_branch: str) -> Dict[str, Any]:
     }
 
 
+def _selection_for_overlay(
+    cfg: Config, overlay_branch: str, build_entries: Optional[Dict[str, Tuple[Optional[datetime], Dict[str, Any]]]] = None
+) -> Dict[str, Any]:
+    """Return selection metadata for overlay from provenance log, git note, or resolver fallback."""
+    entries = build_entries if build_entries is not None else _load_latest_build_entries()
+    selection: Dict[str, Any] = {}
+    entry = entries.get(overlay_branch)
+    if entry:
+        _, payload = entry
+        selection = _selection_from_log(payload)
+    if not selection:
+        note_selection = _read_overlay_note(overlay_branch)
+        if note_selection:
+            selection = note_selection
+    if not selection:
+        selection = _derived_selection(cfg, overlay_branch)
+    return selection
+
+
+def _split_override_values(raw: str) -> List[str]:
+    tokens = raw.replace(",", " ").split()
+    seen: Set[str] = set()
+    values: List[str] = []
+    for token in tokens:
+        value = token.strip().lower()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        values.append(value)
+    return values
+
+
+def _collect_trailer_values(raw: str, trailer_key: str) -> List[str]:
+    key_lower = trailer_key.lower()
+    values: List[str] = []
+    for line in raw.splitlines():
+        if ":" not in line:
+            continue
+        key, rest = line.split(":", 1)
+        if key.strip().lower() != key_lower:
+            continue
+        values.extend(_split_override_values(rest))
+    return values
+
+
+def _commit_override(trailer_key: str, commit: str) -> List[str]:
+    cp = g.run(
+        ["show", "-s", f"--format=%(trailers:key={trailer_key},valueonly)", commit],
+        check=False,
+    )
+    if cp.returncode != 0 or not cp.stdout.strip():
+        return []
+    values: List[str] = []
+    for line in cp.stdout.splitlines():
+        values.extend(_split_override_values(line))
+    return values
+
+
+def _tag_override(trailer_key: str, commit: str) -> Tuple[List[str], Optional[str]]:
+    tag_list = g.run(["tag", "--points-at", commit], check=False)
+    if tag_list.returncode != 0:
+        return [], None
+    candidates: List[Tuple[int, str]] = []
+    for tag in tag_list.stdout.splitlines():
+        if not tag:
+            continue
+        ref = f"refs/tags/{tag}"
+        meta = g.run(
+            ["for-each-ref", ref, "--format=%(objecttype)|%(creatordate:unix)"],
+            check=False,
+        )
+        if meta.returncode != 0:
+            continue
+        parts = meta.stdout.strip().split("|", 1)
+        if len(parts) != 2 or parts[0] != "tag":
+            continue
+        try:
+            ts = int(parts[1])
+        except ValueError:
+            ts = 0
+        candidates.append((ts, tag))
+
+    for _, tag in sorted(candidates, reverse=True):
+        contents = g.run(["tag", "-l", tag, "--format=%(contents)"], check=False)
+        if contents.returncode != 0 or not contents.stdout:
+            continue
+        values = _collect_trailer_values(contents.stdout, trailer_key)
+        if values:
+            return values, tag
+    return [], None
+
+
+def _note_override(trailer_key: str, commit: str) -> List[str]:
+    cp = g.run(
+        ["notes", "--ref", "refs/notes/forked/override", "show", commit],
+        check=False,
+    )
+    if cp.returncode != 0 or not cp.stdout.strip():
+        return []
+    return _collect_trailer_values(cp.stdout, trailer_key)
+
+
+def _resolve_override(cfg: Config, overlay: str, commit: str) -> Dict[str, Any]:
+    trailer_key = cfg.policy_overrides.trailer_key or "Forked-Override"
+    commit_values = _commit_override(trailer_key, commit)
+    if commit_values:
+        return {"source": "commit", "values": commit_values}
+
+    tag_values, tag_name = _tag_override(trailer_key, commit)
+    if tag_values:
+        return {"source": "tag", "values": tag_values, "ref": tag_name}
+
+    note_values = _note_override(trailer_key, commit)
+    if note_values:
+        return {"source": "note", "values": note_values}
+
+    return {"source": "none", "values": []}
+
+
+def _violation_scopes(violations: Dict[str, Any]) -> Set[str]:
+    scopes: Set[str] = set()
+    if not violations:
+        return scopes
+    if "sentinels" in violations:
+        scopes.add("sentinel")
+    if "both_touched" in violations:
+        scopes.add("both_touched")
+    if "size_caps" in violations:
+        scopes.add("size")
+    # Include any additional violation keys for forward compatibility.
+    for key in violations:
+        if key in {"sentinels", "both_touched", "size_caps"}:
+            continue
+        scopes.add(key.lower())
+    return scopes
+
+
 def _collect_status_summary(cfg: Config, latest: int) -> Dict[str, Any]:
     upstream_ref = g.run(
         ["rev-parse", f"{cfg.upstream.remote}/{cfg.upstream.branch}"], check=False
@@ -314,24 +451,13 @@ def _collect_status_summary(cfg: Config, latest: int) -> Dict[str, Any]:
             overlay_sha = rev.stdout.strip()
 
         log_entry = build_entries.get(name)
-        selection: Dict[str, Any]
+        selection = _selection_for_overlay(cfg, name, build_entries)
         built_ts: Optional[datetime] = None
         status_value: Optional[str] = None
 
         if log_entry:
             built_ts, entry_payload = log_entry
-            selection = _selection_from_log(entry_payload)
             status_value = entry_payload.get("status")
-        else:
-            selection = {}
-
-        if not selection:
-            note_selection = _read_overlay_note(name)
-            if note_selection:
-                selection = note_selection
-
-        if not selection:
-            selection = _derived_selection(cfg, name)
 
         if built_ts is None:
             built_ts = datetime.utcfromtimestamp(commit_ts).replace(tzinfo=timezone.utc)
@@ -682,16 +808,39 @@ def guard(
     if mode:
         cfg.guards.mode = mode
     trunk = cfg.branches.trunk
+    overlay_rev = g.run(["rev-parse", overlay], check=False)
+    if overlay_rev.returncode != 0 or not overlay_rev.stdout.strip():
+        typer.secho(
+            f"[guard] Overlay '{overlay}' not found.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=4)
+    overlay_sha = overlay_rev.stdout.strip()
     base = g.merge_base(trunk, overlay)
 
     report: Dict[str, Any] = {
-        "report_version": 1,
+        "report_version": 2,
         "overlay": overlay,
         "trunk": trunk,
         "base": base,
         "violations": {},
     }
     debug_info: Dict[str, Any] = {}
+
+    build_entries = _load_latest_build_entries()
+    selection = _selection_for_overlay(cfg, overlay, build_entries)
+    features_block: Dict[str, Any] = {
+        "source": selection.get("source"),
+        "values": selection.get("features", []),
+    }
+    if selection.get("resolver_source"):
+        features_block["resolver_source"] = selection.get("resolver_source")
+    if selection.get("overlay_profile"):
+        features_block["overlay_profile"] = selection.get("overlay_profile")
+    if selection.get("patches"):
+        features_block["patches"] = selection.get("patches")
+    report["features"] = features_block
 
     if cfg.guards.both_touched:
         bt = both_touched(cfg, base, trunk, overlay)
@@ -720,6 +869,66 @@ def guard(
             "files_changed": size_report["files_changed"],
             "loc": size_report["loc"],
         }
+
+    override_details = _resolve_override(cfg, overlay, overlay_sha)
+    allowed_values_cfg = [value.lower() for value in cfg.policy_overrides.allowed_values or []]
+    override_block: Dict[str, Any] = {
+        "enabled": cfg.policy_overrides.require_trailer or cfg.guards.mode == "require-override",
+        "source": override_details.get("source", "none"),
+        "values": override_details.get("values", []),
+        "applied": False,
+    }
+    if allowed_values_cfg:
+        override_block["allowed_values"] = allowed_values_cfg
+    if "ref" in override_details:
+        override_block["ref"] = override_details["ref"]
+    report["override"] = override_block
+
+    has_violations = bool(report["violations"])
+    violation_scopes = _violation_scopes(report["violations"])
+    override_values = override_block["values"]
+    allowed_set = set(allowed_values_cfg)
+    invalid_values = set()
+    if allowed_set:
+        invalid_values = {value for value in override_values if value not in allowed_set}
+    override_covers = False
+    if violation_scopes:
+        values_set = set(override_values)
+        if "all" in values_set:
+            override_covers = True
+        elif violation_scopes.issubset(values_set):
+            override_covers = True
+    if not violation_scopes:
+        override_covers = True
+
+    override_required = override_block["enabled"] and bool(violation_scopes)
+    override_present = bool(override_values)
+    override_error: Optional[str] = None
+
+    if violation_scopes and override_present and invalid_values:
+        override_error = (
+            f"Override values {sorted(invalid_values)} are not permitted."
+            + (f" Allowed: {', '.join(sorted(allowed_set))}." if allowed_set else "")
+        )
+    elif override_required and violation_scopes:
+        if not override_present:
+            override_error = (
+                f"Override required for violation scopes: {', '.join(sorted(violation_scopes))}."
+            )
+        elif not override_covers:
+            missing = violation_scopes - set(override_values)
+            override_error = (
+                "Override does not cover all violation scopes; missing: "
+                + ", ".join(sorted(missing if missing else violation_scopes))
+            )
+
+    override_applied = (
+        override_present and override_covers and not invalid_values and bool(violation_scopes)
+    )
+    if override_applied and override_required:
+        override_block["applied"] = True
+    if override_error:
+        typer.secho(f"[guard] {override_error}", fg=typer.colors.RED, err=True)
 
     if verbose:
         report["debug"] = debug_info
@@ -750,22 +959,26 @@ def guard(
     repo = g.repo_root()
     logs_dir = repo / ".forked" / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
+    guard_log_entry_override = {k: v for k, v in override_block.items() if k != "allowed_values"}
     guard_log_entry = {
         "timestamp": datetime.now().isoformat(),
         "overlay": overlay,
         "mode": cfg.guards.mode,
         "violations": report["violations"],
         "verbose": verbose,
+        "override": guard_log_entry_override,
+        "features": report["features"],
     }
     if verbose:
         guard_log_entry["debug"] = debug_info
     with (logs_dir / "forked-guard.log").open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(guard_log_entry) + "\n")
 
-    has_violations = bool(report["violations"])
     if cfg.guards.mode == "block" and has_violations:
         raise typer.Exit(code=2)
     if cfg.guards.mode == "require-override" and has_violations:
+        if override_block.get("applied"):
+            return
         raise typer.Exit(code=2)
 
 

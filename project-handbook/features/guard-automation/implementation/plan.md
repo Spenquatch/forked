@@ -31,12 +31,12 @@ tags: [implementation, plan]
    - [ ] Add guard invocation to CI template (post-build) and document required environment variables.
    - [ ] Capture guard artefacts via `make release-status` and surface in release notes.
 5. **Policy Overrides & Report v2**
-   - [ ] Parse override trailers from overlay tip commits, publish tags, and `refs/notes/forked/override`.
-   - [ ] Honor `policy_overrides.require_trailer`, validate scope against `allowed_values`, and exit appropriately in `require-override` mode.
-   - [ ] Bump `report_version` to 2 with an `override` block and provenance-driven `features` list.
+   - [x] Parse override trailers from overlay tip commits, publish tags, and `refs/notes/forked/override`.
+   - [x] Honor `policy_overrides.require_trailer`, validate scope against `allowed_values`, and exit appropriately in `require-override` mode.
+   - [x] Bump `report_version` to 2 with an `override` block and provenance-driven `features` list.
 6. **Provenance Integration**
-   - [ ] Read `.forked/logs/forked-build.log` / overlay notes to attribute guard results per feature.
-   - [ ] Fall back to CLI selection when provenance missing; log warning for telemetry.
+   - [x] Read `.forked/logs/forked-build.log` / overlay notes to attribute guard results per feature.
+   - [x] Fall back to CLI selection when provenance missing; log warning for telemetry.
 
 ## Validation
 - Run `forked guard --overlay overlay/test --mode block` to confirm exit 2 on violations.

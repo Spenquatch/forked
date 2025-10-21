@@ -102,7 +102,20 @@
    jq '.violations.sentinels.must_match_upstream' .forked/report.json
    ```
 
-8. **Status command regression + JSON contract**
+8. **Guard override success path**
+
+   ```bash
+   git checkout overlay/dev
+   git commit --allow-empty -m $'override paperwork\n\nForked-Override: sentinel'
+   git checkout trunk
+   forked guard --overlay overlay/dev --mode require-override
+   jq '.override, .features' .forked/report.json
+   ```
+
+   The guard run should exit `0`, report `override.source == "commit"`, and set
+   `override.applied == true` while exposing the overlay’s feature list.
+
+9. **Status command regression + JSON contract**
 
    ```bash
    forked status --latest 2
@@ -113,7 +126,7 @@
    `status_version: 1`, ahead/behind counts, and overlay selections sourced from
    provenance (`"selection.source": "provenance-log"`).
 
-9. **JSON fallback behaviour**
+10. **JSON fallback behaviour**
 
    ```bash
    mv .forked/logs/forked-build.log .forked/logs/forked-build.log.bak
@@ -127,7 +140,7 @@
    `"selection.source": "derived"` with resolver metadata. Re-run the build to
    put the log/note back for subsequent steps.
 
-10. **Test include/exclude filters**
+11. **Test include/exclude filters**
 
     ```bash
     forked build --overlay dev --exclude patch/service-logging --id dev-minus
@@ -136,7 +149,7 @@
     The build should only cherry-pick `patch/contract-update` and note the
     exclusion in the selection filters.
 
-11. **Ad-hoc feature selection**
+12. **Ad-hoc feature selection**
 
     ```bash
     forked build --features service_logging \
@@ -148,7 +161,7 @@
     This exercises the resolver’s feature list + include override path, and it
     should still populate provenance for the combined selection.
 
-12. **Create and inspect new feature slices**
+13. **Create and inspect new feature slices**
 
     ```bash
     git add forked.yml .gitignore && git commit -m "chore: configure forked"
@@ -159,7 +172,7 @@
     The new feature appears with `patch/checkout/01` and `/02` marked as
     “merged” until they diverge from `trunk`.
 
-13. **Cleanup (optional)**
+14. **Cleanup (optional)**
 
     ```bash
     git worktree prune

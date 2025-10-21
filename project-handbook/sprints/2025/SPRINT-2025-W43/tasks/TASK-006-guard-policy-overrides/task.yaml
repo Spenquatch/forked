@@ -3,7 +3,7 @@ title: Guard Policy Overrides & Report v2
 feature: guard-automation
 decision: ADR-0002
 owner: @ai-agent
-status: todo
+status: review
 story_points: 3
 depends_on: [TASK-003]
 prio: P0

@@ -19,9 +19,10 @@ Outcomes
 - Sentinel checks catch missing overlay files and diverged blobs accurately.
 - Size caps rely on locale-safe `--numstat` aggregation.
 - CLI exits with `typer.Exit` codes surfaced in README checklists.
+- Policy overrides honour commit/tag/note trailers in precedence order and surface an `override` + `features` block in `report_version: 2`.
 
 State
-- Stage: maintained
+- Stage: in-progress
 - Owner: @ai-agent
 
 Backlog Integration

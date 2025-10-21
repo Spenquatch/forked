@@ -63,6 +63,7 @@ class WorktreeCfg:
 class PolicyOverrides:
     require_trailer: bool = False
     trailer_key: str = "Forked-Override"
+    allowed_values: List[str] = field(default_factory=list)
 
 
 @dataclass

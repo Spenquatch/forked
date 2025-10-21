@@ -14,9 +14,11 @@ tags: [testing, guard]
    - Leave overlay-only file in `must_diverge_from_upstream` path → expect **no** violation.
 2. Run `forked guard --overlay overlay/test --mode block`.
    - Exit code should be `2`.
-   - `.forked/report.json` must include `"report_version": 1` and violation details.
-3. Re-run with `--mode warn`; exit should be `0` while violations remain reported.
-4. Use `--verbose` to list sentinel matches and confirm the debug section is appended to `.forked/report.json`.
+   - `.forked/report.json` must include `"report_version": 2`, `violations`, and the new `override` / `features` blocks.
+3. Re-run with `--mode require-override`; without trailers expect exit `2` and a message referencing missing override scopes.
+4. Add override trailer (`Forked-Override: sentinel`) to the overlay tip (or annotated tag/note) and rerun `--mode require-override`; exit should be `0` with `override.applied == true`.
+5. Re-run with `--mode warn`; exit should be `0` while violations remain reported.
+6. Use `--verbose` to list sentinel matches and confirm the debug section is appended to `.forked/report.json`.
 
 ## Size Cap Verification
 1. Create overlay with >N files changed (configure `size_caps.max_files=1`).
@@ -27,12 +29,13 @@ tags: [testing, guard]
 jq '.report_version, .violations' .forked/report.json
 diff -u project-handbook/tests/fixtures/guard-report-example.json .forked/report.json | head
 ```
-- Confirm `report_version == 1`.
-- Ensure sentinel and size cap sections map to lists/dicts as documented.
+- Confirm `report_version == 2`.
+- Ensure sentinel, size cap, `override`, and `features` sections match documented structure.
 
 ## Automation Smoke Test
 - Invoke guard from CI after every overlay build: `forked guard --overlay overlay/$RUN_ID --mode block`.
 - Capture guard output artefact via `make status` or direct upload.
+- For escalation workflows run `forked guard --overlay overlay/$RUN_ID --mode require-override` and require override trailers (`Forked-Override`) for policy violations.
 
 ## Future Enhancements
 - Add unit tests around sentinel helpers (`gitutil.blob_hash`, `_make_spec`).
