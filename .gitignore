@@ -2,7 +2,6 @@
 *.egg-info/
 .forked/
 demo-*/
-forked*
 demo-feature-run-origin.git/
 demo-feature-run-upstream.git/
 demo-feature-run/

@@ -836,7 +836,7 @@ def _execute_clean_actions(actions: Sequence[_CleanAction]) -> None:
 
 
 def _print_clean_summary(
-    actions: Sequence[_CleanAction], skipped: Sequence[_SkippedItem]
+    actions: Sequence[_CleanAction], skipped_items: Sequence[_SkippedItem]
 ) -> None:
     categories = ["overlays", "worktrees", "conflicts"]
     actions_by_cat: Dict[str, List[_CleanAction]] = {
@@ -844,7 +844,7 @@ def _print_clean_summary(
         for cat in categories
     }
     skipped_by_cat: Dict[str, List[_SkippedItem]] = {
-        cat: [item for item in skipped if item.category == cat]
+        cat: [item for item in skipped_items if item.category == cat]
         for cat in categories
     }
 
@@ -870,8 +870,8 @@ def _print_clean_summary(
                 )
             else:
                 typer.echo(f"    - {action.description}")
-        for skipped in cat_skips:
-            typer.echo(f"    - {skipped.description}")
+        for skip_item in cat_skips:
+            typer.echo(f"    - {skip_item.description}")
 
 
 def _collect_status_summary(cfg: Config, latest: int) -> Dict[str, Any]:

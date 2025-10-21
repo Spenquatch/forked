@@ -50,3 +50,4 @@ python_version = "3.10"
 files = ["forked/cli.py"]
 strict = false
 ignore_missing_imports = true
+follow_imports = "skip"
