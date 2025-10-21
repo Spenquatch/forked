@@ -4,7 +4,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
 
-from .config import Config, Feature
+from config import Config, Feature
 
 
 class ResolutionError(Exception):

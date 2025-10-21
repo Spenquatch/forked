@@ -9,10 +9,10 @@ links: []
 
 # Command Snippets
 
-## Move Package into src/
+## Flatten Package Layout
 ```bash
-mkdir -p src
-mv forked src/
+mv src/forked/*.py src/
+rmdir src/forked
 ```
 
 ## Update Poetry Configuration

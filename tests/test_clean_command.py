@@ -4,8 +4,8 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from forked.cli import app
-from forked.config import load_config, write_config, write_skeleton
+from cli import app
+from config import load_config, write_config, write_skeleton
 
 runner = CliRunner(mix_stderr=False)
 

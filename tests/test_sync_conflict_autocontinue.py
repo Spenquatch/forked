@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 from typer.testing import CliRunner
 
-from forked.cli import app
+from cli import app
 
 
 def _configure_sync(repo_path: Path, patch_branch: str) -> None:

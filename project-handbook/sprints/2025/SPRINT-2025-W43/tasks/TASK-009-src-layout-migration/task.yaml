@@ -9,7 +9,7 @@ depends_on: [TASK-005]
 prio: P1
 due: 2025-10-24
 acceptance:
-  - All runtime modules moved to `src/forked/` with Poetry configured to use the src layout.
+  - All runtime modules live directly under `src/` with Poetry configured to use the src layout.
   - CLI, tests, scripts, and handbook automation run successfully via `poetry run` after the migration.
   - Ruff, mypy, pytest, and sanity workflow validated post-move; documentation updated accordingly.
 links:

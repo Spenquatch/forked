@@ -35,7 +35,7 @@ Forked CLI coordinates those pieces so you can rebuild or guard your patch stack
 
 ```
 .
-├── forked/                    # CLI source code (typer-based)
+├── src/                       # CLI source modules (typer-based)
 ├── pyproject.toml             # packaging metadata for editable install
 ├── scripts/setup-demo-repo.sh # helper to create a sandbox repo with patch branches
 ├── project-handbook/          # sprint/release handbook (Makefile-driven)
@@ -605,7 +605,7 @@ The script provisions:
 # install runtime + dev dependencies inside a Poetry virtualenv
 poetry install --with dev
 
-# runtime package lives under src/forked/ to mirror installed layout
+# runtime modules live directly under src/
 
 # lint & format with Ruff
 poetry run ruff check .

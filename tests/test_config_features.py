@@ -1,7 +1,7 @@
 import pytest
 
-from forked.config import Config, Feature, OverlayProfile
-from forked.resolver import ResolutionError, resolve_selection
+from config import Config, Feature, OverlayProfile
+from resolver import ResolutionError, resolve_selection
 
 
 def make_config() -> Config:

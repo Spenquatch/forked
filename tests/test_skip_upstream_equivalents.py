@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from forked.build import _upstream_equivalent_commits, build_overlay
-from forked.resolver import resolve_selection
+from build import _upstream_equivalent_commits, build_overlay
+from resolver import resolve_selection
 
 from .test_build_provenance import _make_config, _prepare_feature_branch
 

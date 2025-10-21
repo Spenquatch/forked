@@ -10,8 +10,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from . import gitutil as g
-from .config import Config, Feature, Sentinels
+import gitutil as g
+from config import Config, Feature, Sentinels
 
 BINARY_DIFF_THRESHOLD = 256 * 1024  # 256 KiB
 POSIX_SHELL_NOTE = "Commands assume a POSIX-compatible shell (e.g. bash, git bash, WSL)."

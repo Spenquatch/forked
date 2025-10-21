@@ -13,12 +13,12 @@ from typing import Annotated, Any
 import typer
 from rich import print as rprint
 
-from . import gitutil as g
-from .build import build_overlay
-from .config import Config, Feature, load_config, write_config, write_skeleton
-from .guards import both_touched, sentinels, size_caps
-from .resolver import ResolutionError, resolve_selection
-from .sync import run_sync
+import gitutil as g
+from build import build_overlay
+from config import Config, Feature, load_config, write_config, write_skeleton
+from guards import both_touched, sentinels, size_caps
+from resolver import ResolutionError, resolve_selection
+from sync import run_sync
 
 app = typer.Typer(add_completion=False)
 feature_app = typer.Typer(help="Feature slice management")

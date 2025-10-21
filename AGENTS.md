@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 - `README.md` — product spec and operational context for the Forked CLI MVP.
-- `src/forked/` — runtime Python package (installed layout mirrors production).
+- `src/` — runtime Python modules (installed layout mirrors production).
 - `legacy-handbook/` — sprint-based project handbook (features, releases, sprints, backlog, docs, automation).
   - `features/` tracks overlay, guard, and release initiatives.
   - `releases/v1.0.0/` captures the current Forked CLI delivery plan.

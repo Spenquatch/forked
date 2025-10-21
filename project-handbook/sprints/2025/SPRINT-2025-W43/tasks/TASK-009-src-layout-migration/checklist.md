@@ -9,8 +9,8 @@ links: []
 
 # Completion Checklist
 
-- [ ] Runtime package lives under `src/forked/` (no stray modules at repo root).
-- [ ] Poetry configuration updated (`packages = [{ include = "forked", from = "src" }]`).
-- [ ] Imports/tests/scripts adjusted to use package imports (no reliance on repo root).
+- [ ] Runtime modules live directly under `src/` (no nested `forked/` directory remains).
+- [ ] Poetry configuration updated for module distribution (`packages = [{ include = "*", from = "src" }]`).
+- [ ] Imports/tests/scripts updated to reference top-level modules (no reliance on `forked.` package paths).
 - [ ] Ruff, mypy, pytest, and sanity workflow pass post-migration.
 - [ ] Documentation (README, development workflow, sanity checklist) updated with new layout instructions.
