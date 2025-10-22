@@ -131,7 +131,7 @@ Need help? File an issue, browse the docs in [`docs/`](docs/), or start with the
 └── README.md                  # this document
 ```
 
-Run-time artefacts are intentionally kept out of Git:
+Run-time artifacts are intentionally kept out of Git:
 
 ```
 .forked/                       # logs, guard reports, and overlay worktrees
@@ -170,7 +170,7 @@ The CLI requires:
 ./scripts/setup-demo-repo.sh demo-forked
 cd demo-forked
 
-# 1. Initialise Forked CLI in the repo
+# 1. Initialize Forked CLI in the repo
 forked init
 
 # 2. Configure patch order and optional sentinels in forked.yml
@@ -222,11 +222,11 @@ forked sync
 
    The resolver preserves global patch order, surfaces unmatched patterns, and logs provenance (features, patches, and filters) to `.forked/logs/forked-build.log` and optional git notes on the overlay tip.
 
-4. **Optimise repeat builds** with `--skip-upstream-equivalents` (filters commits that already exist on trunk via `git cherry`).
+4. **Optimize repeat builds** with `--skip-upstream-equivalents` (filters commits that already exist on trunk via `git cherry`).
 
 5. **Automate overlays safely** using the new selection metadata in git notes and build logs—these record the active feature set so guard/status tooling and downstream bots can reason about provenance.
 
-The key artefacts after a build/guard cycle:
+The key artifacts after a build/guard cycle:
 
 - `.forked/worktrees/<id>/` – the reuseable overlay worktree.
 - `.forked/logs/forked-build.log` – append-only JSON telemetry describing each build.
@@ -236,7 +236,7 @@ The key artefacts after a build/guard cycle:
 
 ## Configuration (`forked.yml`)
 
-`forked.yml` is committed to your repository and controls upstream, patch ordering, guards, and worktree behaviour.
+`forked.yml` is committed to your repository and controls upstream, patch ordering, guards, and worktree behavior.
 
 ```yaml
 version: 1
@@ -287,10 +287,10 @@ policy_overrides:
   trailer_key: "Forked-Override"
 ```
 
-Key behaviours:
+Key behaviors:
 
 - Relative `worktree.root` paths are relocated outside the Git repo to avoid nested worktrees.
-- Setting `$FORKED_WORKTREES_DIR` overrides the root path. On POSIX platforms the CLI rejects Windows-style roots (`C:\…`) to prevent confusion.
+- Setting `$FORKED_WORKTREES_DIR` overrides the root path. On POSIX platforms, the CLI rejects Windows-style roots (`C:\…`) to prevent confusion.
 - Sentinel sections determine whether specific paths must match or must diverge from upstream in the final overlay.
 
 ---
@@ -350,7 +350,7 @@ forked build [--overlay PROFILE | --features NAME[,NAME...]] [--include PATTERN]
 - `--auto-continue` – legacy alias for `--on-conflict bias`.
 - `--git-note/--no-git-note` – opt in/out of writing provenance notes to `refs/notes/forked-meta`.
 
-Behaviour highlights:
+Behavior highlights:
 
 - Worktree directories are reused between builds. If a stale directory blocks reuse, the CLI suffixes the path (e.g., `test-1`) and prints a reminder to run `git worktree prune`.
 - Build summaries now display applied versus skipped commits (`--skip-upstream-equivalents`) and record the active feature set in `.forked/logs/forked-build.log` alongside resolver inputs.
@@ -382,7 +382,7 @@ Successful syncs return to the previously checked-out ref and log the run to `.f
 forked guard --overlay OVERLAY [--output PATH] [--mode MODE] [--verbose]
 ```
 
-- `--overlay` *(required)* – overlay branch/ref to analyse (e.g., `overlay/test`).
+- `--overlay` *(required)* – overlay branch/ref to analyze (e.g., `overlay/test`).
 - `--output` – report destination (default `.forked/report.json`).
 - `--mode` – overrides `guards.mode` (`warn`, `block`, or `require-override`).
 - `--verbose` / `-v` – print sentinel matches and include extra debug data in the report/logs.
@@ -399,7 +399,7 @@ policy_overrides:
 When `guards.mode=require-override` (or `policy_overrides.require_trailer` is set), guard looks
 for override trailers in this order: overlay tip commit → annotated tag message → git note
 (`refs/notes/forked/override`). The first match wins; values can be comma- or space-delimited and
-are normalised to lowercase (`sentinel`, `size`, `both_touched`, or `all`). Overrides must cover
+are normalized to lowercase (`sentinel`, `size`, `both_touched`, or `all`). Overrides must cover
 every violation scope (or specify `all`) and respect `allowed_values`.
 
 The v2 report schema contains:
@@ -408,7 +408,7 @@ The v2 report schema contains:
 - `sentinels.must_match_upstream` / `.must_diverge_from_upstream` – validation results for sentinel globs.
 - `size_caps` – diff size metrics via `git diff --numstat`.
 - `violations` – subset of the above that failed policy.
-- `override` – `{enabled, source, values, applied}` describing the override that was honoured (source `commit|tag|note|none`).
+- `override` – `{enabled, source, values, applied}` describing the override that was honored (source `commit|tag|note|none`).
 - `features` – provenance-sourced feature list for the overlay (`source` reflects provenance log, git note, or resolver fallback).
 
 Example extract:
@@ -444,7 +444,7 @@ Exit codes:
 forked status [--latest N] [--json]
 ```
 
-- Default output mirrors previous behaviour: upstream/trunk SHAs, patch branches in configured order, and the newest overlays with their build timestamps and both-touched counts. The overlay window defaults to the latest **5** entries; adjust with `--latest N`.
+- Default output mirrors previous behavior: upstream/trunk SHAs, patch branches in configured order, and the newest overlays with their build timestamps and both-touched counts. The overlay window defaults to the latest **5** entries; adjust with `--latest N`.
 - `--json` emits a machine-readable payload (`status_version: 1`) suitable for dashboards or guard automation. Provenance is sourced from `.forked/logs/forked-build.log` / `refs/notes/forked-meta`, with automatic fallbacks when those entries are missing.
 
 Example:
@@ -577,9 +577,9 @@ Example (trimmed):
 }
 ```
 
-Guard checks in `mode=require-override` look for the configured trailer key (default `Forked-Override`) on the overlay tip commit, then annotated tags, then `refs/notes/forked/override`. The `override` block records which source supplied the escalation marker and whether it satisfied the active violations (or the special value `all`). The `features` block carries the provenance list harvested from build logs/notes so downstream tooling knows which slices were active.
+Guard checks in `mode=require-override` look for the configured trailer key (default `Forked-Override`) on the overlay tip commit, then annotated tags, then `refs/notes/forked/override`. The `override` block records which source supplied the escalation marker and whether it satisfied the active violations (or the special value `all`). The `features` block carries the provenance list harvested from build logs/notes, so downstream tooling knows which slices were active.
 
-Downstream tooling (CI, bots) can parse `violations` and `override` to fail builds or surface escalation guidance. The `report_version` field allows the format to evolve while preserving backwards compatibility.
+Downstream tooling (CI, bots) can parse `violations` and `override` to fail builds or surface escalation guidance. The `report_version` field allows the format to evolve while preserving backward compatibility.
 
 ---
 
@@ -716,7 +716,7 @@ poetry run make -C project-handbook help
 
 ```bash
 # 1. Update version in pyproject.toml (PEP 440 format)
-# 2. Verify packaging artefacts locally
+# 2. Verify packaging artifacts locally
 poetry build
 # 3. Publish using an API token (set POETRY_PYPI_TOKEN_PYPI beforehand)
 poetry publish --build
@@ -752,4 +752,4 @@ When making CLI changes, regenerate the demo repo (script above), rerun `forked 
 
 ---
 
-Forked CLI is still evolving. If you have questions or ideas for the next iteration (better guard reporting, new commands, CI integrations), open an issue or capture it in the project handbook backlog. Happy overlaying! 🚀
+Forked is still evolving. If you have questions or ideas for the next iteration (better guard reporting, new commands, CI integrations), open an issue or capture it in the project handbook backlog. Happy overlaying! 🚀
