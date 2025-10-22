@@ -1,44 +1,133 @@
-# Forked CLI
+# Forked
 
-Forked CLI lets you treat your fork like a product: keep `trunk` fast‑forwarded to upstream, stack patch branches in a reproducible overlay, and guard releases with deterministic policy checks. This repository contains the editable CLI implementation, automation scripts, and the project handbook that tracks sprint and release work.
+Forked keeps long-lived forks healthy. It lets you:
 
----
+- Track upstream with a clean `trunk`
+- Rebuild feature stacks as disposable overlays
+- Capture guard reports and conflict bundles for automation
+- Clean up worktrees, conflict artefacts, and stale overlays safely
 
-## Table of Contents
-
-1. [Concepts](#concepts)
-2. [Repository Layout](#repository-layout)
-3. [Installation](#installation)
-4. [Quick Start](#quick-start)
-5. [Configuration (`forked.yml`)](#configuration-forkedyml)
-6. [CLI Commands](#cli-commands)
-7. [Guard Reports](#guard-reports)
-8. [Logs & Generated Artifacts](#logs--generated-artifacts)
-9. [Demo Repository](#demo-repository)
-10. [Development Workflow](#development-workflow)
-11. [Troubleshooting](#troubleshooting)
+This document focuses on getting you productive quickly with the published PyPI package.
 
 ---
 
-## Concepts
+## Installation
 
-- **Upstream** – the canonical repository you track. `forked init` keeps a local branch named `trunk` fast‑forwarded to `upstream/<branch>`.
-- **Patch branches** – lightweight topic branches (`patch/*`) stacked in `forked.yml.patches.order`. They are replayed during every build.
-- **Overlay** – a disposable branch (`overlay/<id>`) that results from applying the ordered patch list on top of `trunk`. Optionally materialised via a Git worktree.
-- **Guard** – policy checks (sentinels, both‑touched files, size caps) that validate the overlay and emit JSON reports for CI or local review.
+```bash
+pip install forked
+# or, in an isolated environment
+pipx install forked
+```
 
-Forked CLI coordinates those pieces so you can rebuild or guard your patch stack deterministically without mutating your day‑to‑day working tree.
+Requirements:
+- Git ≥ 2.31 (2.38 enables `zdiff3` conflict style)
+- Python ≥ 3.10
+
+You can still work on the CLI locally via:
+```bash
+python -m pip install -e .
+```
 
 ---
+
+## First-Time Setup
+
+1. **Clone your fork** and add the upstream remote.
+2. **Run `forked init`:**
+   ```bash
+   forked init --upstream-remote upstream --upstream-branch main
+   ```
+   This creates `trunk`, scaffolds `forked.yml`, and sets up `.forked/` for logs, overlays, and guard artefacts.
+3. **Describe your stack** in `forked.yml`:
+   - `patches.order` lists the topic branches in the sequence you want them cherry-picked.
+   - `features` group related patches so you can turn whole slices on/off with a flag.
+   - `overlays` map a friendly name (e.g., `dev`) to the feature set that should be built.
+
+   ```yaml
+   patches:
+     order:
+       - patch/payments/01
+       - patch/payments/02
+   features:
+     payments:
+       patches:
+         - patch/payments/01
+         - patch/payments/02
+   overlays:
+     dev:
+       features: [payments]
+   ```
+   With this config, `forked build --overlay dev` applies the two payment patches, and you can layer in more feature blocks or custom overlays as your fork grows.
+
+---
+
+## Core Workflow
+
+| Step | Command | What it does |
+|------|---------|--------------|
+| Build overlay | `forked build --overlay dev` | Applies ordered patches on `trunk`, logs selections, optionally emits conflict bundles (`--emit-conflicts-path`). |
+| Guard overlay | `forked guard --overlay overlay/dev --mode block` | Runs sentinel checks, produces `.forked/report.json`, returns non-zero if policy fails. |
+| Status summary | `forked status --json --latest 5` | Prints upstream/trunk SHAs, per-patch ahead/behind, overlay provenance (with fallback warnings). |
+| Sync patches | `forked sync --emit-conflicts-path .forked/conflicts/sync --on-conflict stop` | Rebases patch branches onto latest upstream, capturing conflicts with resume instructions. |
+| Clean artefacts | `forked clean --dry-run --overlays 'overlay/tmp-*' --worktrees --conflicts` | Plans or executes cleanup of old overlays/worktrees/conflict bundles. |
+
+Additional helpers:
+- `forked feature create checkout --slices 2` – scaffold feature slices
+- `forked feature status` – show ahead/behind per feature slice
+- `forked build --auto-continue --on-conflict bias` – auto-resolve with path bias rules
+
+---
+
+## Example Session
+
+```bash
+# 1. Initialise and configure
+forked init
+editor forked.yml   # add patch order, features, sentinels
+
+# 2. Build overlay with provenance logs
+forked build --overlay dev --emit-conflicts-path .forked/conflicts/dev
+
+# 3. Guard the overlay (fails if sentinels trigger)
+forked guard --overlay overlay/dev --mode block
+
+# 4. Resolve override requirements if needed
+git -C .forked/worktrees/dev commit --allow-empty -m $'override\n\nForked-Override: sentinel'
+forked guard --overlay overlay/dev --mode require-override
+
+# 5. Inspect status JSON for dashboards
+forked status --json --latest 3 | jq
+
+# 6. Sync patch stack against upstream
+forked sync --emit-conflicts-path .forked/conflicts/sync --on-conflict stop
+
+# 7. Tidy stale overlays/worktrees
+forked clean --no-dry-run --confirm --overlays 'overlay/tmp-*' --worktrees
+```
+
+All JSON logs live under `.forked/logs/`. Conflict bundles (schema v2) include wave numbering, blob references, and resume commands for automation.
+
+---
+
+## Learning More
+
+- `sanity_check.md` – guided walkthrough covering all commands
+- `docs/` – command reference and workflow guides
+- `tests/` – Pytest scenarios demonstrating guard overrides, conflict bundles, status provenance, etc.
+
+Need help? File an issue, browse the docs in [`docs/`](docs/), or start with the demo script:
+```bash
+./scripts/setup-demo-repo.sh demo-forked
+```
 
 ## Repository Layout
 
 ```
 .
 ├── src/                       # CLI source modules (typer-based)
+├── docs/                      # command reference and workflow guides
 ├── pyproject.toml             # packaging metadata for editable install
 ├── scripts/setup-demo-repo.sh # helper to create a sandbox repo with patch branches
-├── project-handbook/          # sprint/release handbook (Makefile-driven)
 └── README.md                  # this document
 ```
 
