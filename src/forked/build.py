@@ -11,10 +11,10 @@ from typing import Any
 import typer
 from pathspec import PathSpec
 
-import gitutil as g
-from config import Config
-from conflicts import ConflictContext, apply_recommendations, create_conflict_writer
-from resolver import ResolvedSelection
+from . import gitutil as g
+from .config import Config
+from .conflicts import ConflictContext, apply_recommendations, create_conflict_writer
+from .resolver import ResolvedSelection
 
 
 def _conflict_paths(cwd: str | None = None) -> list[str]:

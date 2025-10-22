@@ -9,9 +9,9 @@ from typing import Any
 
 import typer
 
-import gitutil as g
-from config import Config
-from conflicts import ConflictContext, apply_recommendations, create_conflict_writer
+from . import gitutil as g
+from .config import Config
+from .conflicts import ConflictContext, apply_recommendations, create_conflict_writer
 
 
 def _quote_cli(value: str) -> str:

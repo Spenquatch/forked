@@ -4,8 +4,8 @@ from typing import Any
 
 from pathspec import PathSpec
 
-import gitutil as g
-from config import Config
+from . import gitutil as g
+from .config import Config
 
 
 def _make_spec(globs: list[str]) -> PathSpec:

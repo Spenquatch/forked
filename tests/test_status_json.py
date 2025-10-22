@@ -3,8 +3,8 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from cli import app
-from config import Feature, load_config, write_config, write_skeleton
+from forked.cli import app
+from forked.config import Feature, load_config, write_config, write_skeleton
 
 runner = CliRunner()
 
