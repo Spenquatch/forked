@@ -20,7 +20,7 @@
 ## Coding Style & Naming Conventions
 - Python 3.10+, 4-space indentation, 100-character line limit (enforced by Ruff).
 - Prefer type hints; mypy runs with `check_untyped_defs`.
-- Modules live flat under `src/`; avoid implicit packages or relative path hacks.
+- Modules live under `src/forked/`; avoid duplicating top-level modules that could collide with third-party packages.
 - Use descriptive snake_case for variables/functions, CapWords for classes.
 
 ## Testing Guidelines

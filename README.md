@@ -124,7 +124,7 @@ Need help? File an issue, browse the docs in [`docs/`](docs/), or start with the
 
 ```
 .
-├── src/                       # CLI source modules (typer-based)
+├── src/forked/                # CLI source package (typer-based)
 ├── docs/                      # command reference and workflow guides
 ├── pyproject.toml             # packaging metadata for editable install
 ├── scripts/setup-demo-repo.sh # helper to create a sandbox repo with patch branches

@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.scripts]
-forked = "cli:app"
+forked = "forked.cli:app"
 
 [project.urls]
 Repository = "https://github.com/Spenquatch/fork"
@@ -35,7 +35,7 @@ Issues = "https://github.com/Spenquatch/fork/issues"
 Documentation = "https://github.com/Spenquatch/fork#readme"
 
 [tool.poetry]
-packages = [{ include = "*", from = "src" }]
+packages = [{ include = "forked", from = "src" }]
 include = ["README.md", "LICENSE"]
 
 [tool.poetry.group.dev.dependencies]
@@ -68,7 +68,7 @@ skip-magic-trailing-comma = false
 
 [tool.mypy]
 python_version = "3.10"
-files = ["src"]
+files = ["src/forked"]
 strict = false
 ignore_missing_imports = true
 follow_imports = "skip"

@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 from typer.testing import CliRunner
 
-from cli import app
+from forked.cli import app
 
 
 def _configure_forked(repo_path: Path, patches: list[str]) -> None:

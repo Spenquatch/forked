@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
-from build import build_overlay
-from config import Config, Feature, OverlayProfile
-from resolver import resolve_selection
+from forked.build import build_overlay
+from forked.config import Config, Feature, OverlayProfile
+from forked.resolver import resolve_selection
 
 
 def _prepare_feature_branch(git_repo):
