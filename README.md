@@ -64,7 +64,7 @@ python -m pip install -e .
 Once published, the recommended user path will be:
 
 ```bash
-pipx install forked-cli
+pipx install forked
 ```
 
 The CLI requires:
@@ -633,7 +633,7 @@ poetry build
 poetry publish --build
 ```
 
-The build step produces `dist/forked_cli-<version>.whl` and `.tar.gz`. Inspect the wheel (`unzip -l dist/*.whl`) if you need to confirm module contents before publishing.
+The build step produces `dist/forked-<version>.whl` and `.tar.gz`. Inspect the wheel (`unzip -l dist/*.whl`) if you need to confirm module contents before publishing.
 
 #### GitHub Actions Release
 

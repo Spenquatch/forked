@@ -52,7 +52,7 @@ def test_require_override_without_marker_fails(git_repo, monkeypatch):
 
     result = runner.invoke(app, ["guard", "--overlay", "overlay/dev", "--mode", "require-override"])
     assert result.exit_code == 2
-    assert "[guard] Override required" in result.stderr
+    assert "[guard] Override required" in result.output
 
 
 def test_commit_override_allows_violation(git_repo, monkeypatch):
@@ -97,7 +97,7 @@ def test_disallowed_override_scope_fails(git_repo, monkeypatch):
 
     result = runner.invoke(app, ["guard", "--overlay", "overlay/dev", "--mode", "require-override"])
     assert result.exit_code == 2
-    assert "not permitted" in result.stderr
+    assert "not permitted" in result.output
 
 
 def test_tag_override_used_when_commit_missing(git_repo, monkeypatch):

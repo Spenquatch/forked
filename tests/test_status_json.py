@@ -92,7 +92,8 @@ def test_status_json_derives_selection_without_provenance(git_repo, monkeypatch)
     derived = runner.invoke(app, ["status", "--json"])
     assert derived.exit_code == 0, derived.stdout
 
-    payload = json.loads(derived.stdout)
+    data_lines = [line for line in derived.stdout.splitlines() if not line.startswith("[status]")]
+    payload = json.loads("\n".join(data_lines))
     overlay = payload["overlays"][0]
     assert overlay["selection"]["source"] == "derived"
     assert overlay["selection"]["patches"] == ["patch/payments/01"]

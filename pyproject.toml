@@ -1,5 +1,5 @@
 [project]
-name = "forked-cli"
+name = "forked"
 version = "v0.0.1"
 description = "Git-native fork overlay & guard tool"
 readme = "README.md"
@@ -54,7 +54,7 @@ exclude = [
     "project-handbook",
     "scripts",
     "demo-*",
-    "forked_cli.egg-info",
+    "forked.egg-info",
 ]
 
 [tool.ruff.lint]
